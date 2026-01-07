@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Live Ranking</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 16px; }
+    h1 { margin: 0 0 8px; font-size: 22px; }
+    .pill { display:inline-block; padding: 6px 10px; border-radius: 999px; border: 1px solid #ccc; background:#fafafa; font-size: 13px; margin-right:8px; margin-top:8px; }
+    .muted { color:#666; font-size:13px; margin-top:6px; }
+    table { width:100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { padding: 8px; border-bottom: 1px solid #eee; text-align:left; }
+    th { font-size: 13px; color:#444; }
+    .right { text-align:right; }
+  </style>
+</head>
+<body>
+  <h1>Live-Ranking</h1>
+  <div id="top"></div>
+  <div class="muted" id="hint"></div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Team</th>
+        <th class="right">Personen</th>
+        <th class="right">Alk. (Stk)</th>
+        <th class="right">Alk./Kopf</th>
+        <th class="right">Gesamt €</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+  import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+  // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyCfVcbK7TfylUqkG1q0kxsClot91n0I4fE",
+  authDomain: "bonierung-usv.firebaseapp.com",
+  projectId: "bonierung-usv",
+  storageBucket: "bonierung-usv.firebasestorage.app",
+  messagingSenderId: "284808411878",
+  appId: "1:284808411878:web:7555ecae33f7ab79615927",
+  measurementId: "G-107XQLKP9M"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  const params = new URLSearchParams(location.search);
+  const eventId = params.get("event") || "";
+
+  const top = document.getElementById("top");
+  const hint = document.getElementById("hint");
+  const tbody = document.getElementById("tbody");
+
+  if (!eventId) {
+    top.innerHTML = `<span class="pill">Fehler</span>`;
+    hint.textContent = "Kein event=… Parameter in der URL.";
+    throw new Error("Missing event param");
+  }
+
+  const LOCAL_FREEZE_KEY = "public_freeze_" + eventId;
+
+  function render(ag, meta, frozenMode) {
+    const endTs = meta?.countdownEndTs ?? null;
+    const frozenAtTs = meta?.publicFrozenAtTs ?? null;
+
+    const now = Date.now();
+    const closed = endTs && now >= endTs;
+
+    const remaining = endTs ? Math.max(0, endTs - now) : null;
+    const mm = remaining != null ? Math.floor(remaining / 60000) : null;
+    const ss = remaining != null ? Math.floor((remaining % 60000) / 1000) : null;
+
+    top.innerHTML = `
+      <span class="pill">Event: <b>${escapeHtml(eventId)}</b></span>
+      <span class="pill">Status: <b>${frozenMode ? "geschlossen" : "live"}</b></span>
+      ${endTs ? `<span class="pill">Countdown: <b>${mm}:${String(ss).padStart(2,"0")}</b></span>` : `<span class="pill">Countdown: <b>—</b></span>`}
+      ${frozenAtTs ? `<span class="pill">Freeze: <b>${new Date(frozenAtTs).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}</b></span>` : ``}
+    `;
+
+    hint.textContent = frozenMode
+      ? "Ranking ist geschlossen. Das ist der Stand beim Ablauf."
+      : (closed ? "Countdown abgelaufen – warte auf Freeze…" : "Live-Stand (aktualisiert automatisch).");
+
+    const rows = (ag?.teams ?? []).slice().sort((a,b) => (b.revenue - a.revenue));
+    tbody.innerHTML = "";
+    rows.forEach((r, i) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${i+1}</td>
+        <td>${escapeHtml(r.name)}</td>
+        <td class="right">${r.size}</td>
+        <td class="right">${r.alcQty}</td>
+        <td class="right">${Number(r.alcPerHead).toFixed(2)}</td>
+        <td class="right"><b>${fmtEUR(r.revenue)}</b></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+  function fmtEUR(n) {
+    return new Intl.NumberFormat("de-AT", { style:"currency", currency:"EUR" }).format(n ?? 0);
+  }
+
+  const ref = doc(db, "events", eventId);
+  onSnapshot(ref, (snap) => {
+    const data = snap.data();
+    if (!data) return;
+
+    const meta = data.meta ?? {};
+    const endTs = meta.countdownEndTs ?? null;
+    const frozenAtTs = meta.publicFrozenAtTs ?? null;
+    const closed = endTs && Date.now() >= endTs;
+
+    // 1) Prefer official frozen snapshot written by admin
+    if (data.public?.frozen && (frozenAtTs || closed)) {
+      localStorage.removeItem(LOCAL_FREEZE_KEY);
+      render(data.public.frozen, meta, true);
+      return;
+    }
+
+    // 2) If closed but not yet frozen in DB, freeze locally at first closed moment
+    if (closed) {
+      const cached = localStorage.getItem(LOCAL_FREEZE_KEY);
+      if (cached) {
+        const local = JSON.parse(cached);
+        render(local, meta, true);
+        return;
+      }
+      const live = data.live?.aggregates ?? null;
+      if (live) {
+        localStorage.setItem(LOCAL_FREEZE_KEY, JSON.stringify(live));
+        render(live, meta, true);
+        return;
+      }
+    }
+
+    // 3) Otherwise live
+    render(data.live?.aggregates ?? null, meta, false);
+  });
+
+  // keep countdown ticking visually
+  setInterval(() => {}, 1000);
+</script>
+</body>
+</html>
