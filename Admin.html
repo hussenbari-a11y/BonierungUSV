@@ -1,0 +1,1078 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bonierung – Admin</title>
+  <style>
+    :root{
+      --b:#e6e6e6; --mut:#666; --ok:#0a7a2f; --bad:#b00020;
+      --bg:#fff; --soft:#fafafa;
+    }
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:16px;background:var(--bg)}
+    h1{margin:0 0 10px;font-size:20px}
+    .top{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .card{border:1px solid var(--b);border-radius:12px;padding:12px;margin:12px 0;background:#fff}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    input,select,button{padding:9px 10px;border:1px solid #cfcfcf;border-radius:10px;font-size:14px;background:#fff}
+    button{cursor:pointer}
+    button.primary{background:#111;color:#fff;border-color:#111}
+    button.ghost{background:#fff}
+    button.danger{border-color:#ffb3b3}
+    .pill{display:inline-block;padding:2px 10px;border:1px solid var(--b);border-radius:999px;font-size:12px;color:#333}
+    .mut{color:var(--mut);font-size:12px}
+    .ok{color:var(--ok);font-weight:700}
+    .bad{color:var(--bad);font-weight:700}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .tabbtn{padding:8px 12px;border-radius:999px;border:1px solid var(--b);background:#fff}
+    .tabbtn.active{background:#111;color:#fff;border-color:#111}
+    .tab{display:none}
+    .tab.active{display:block}
+
+    /* Bonieren UI */
+    .gridTeams{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+    @media(max-width:900px){.gridTeams{grid-template-columns:repeat(3,1fr)}}
+    .teamTile{border:1px solid var(--b);border-radius:12px;padding:10px;background:var(--soft);text-align:left}
+    .teamTile.active{outline:3px solid #111;background:#fff}
+    .teamName{font-weight:700;font-size:14px}
+    .teamMeta{font-size:12px;color:var(--mut);margin-top:3px}
+
+    .gridDrinks{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    @media(max-width:900px){.gridDrinks{grid-template-columns:repeat(2,1fr)}}
+    .drinkTile{border:1px solid var(--b);border-radius:14px;padding:14px;background:#fff;text-align:left;min-height:68px}
+    .drinkName{font-weight:700}
+    .drinkPrice{margin-top:4px;color:var(--mut);font-size:12px}
+
+    /* Tables */
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{border-bottom:1px solid #f0f0f0;padding:10px 8px;text-align:left;vertical-align:middle}
+    th{background:#fafafa;font-size:13px}
+
+    /* Drag list */
+    .dragList{margin-top:10px}
+    .dragItem{
+      display:flex;align-items:center;gap:10px;
+      border:1px solid var(--b);border-radius:12px;padding:10px;margin:8px 0;background:#fff
+    }
+    .handle{cursor:grab;user-select:none}
+    .grow{flex:1}
+    .mini{padding:6px 9px;border-radius:9px;font-size:13px}
+
+    /* Modal */
+    .modalBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:18px}
+    .modalBackdrop.show{display:flex}
+    .modal{background:#fff;border-radius:16px;max-width:520px;width:100%;padding:14px;border:1px solid var(--b)}
+    .modal h3{margin:0 0 10px}
+    .qtyGrid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+    @media(max-width:520px){.qtyGrid{grid-template-columns:repeat(3,1fr)}}
+    .qtyBtn{padding:12px 0;border-radius:12px;border:1px solid var(--b);background:#fff}
+    .qtyBtn.primary{background:#111;color:#fff;border-color:#111}
+    .modalFooter{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
+    .log{white-space:pre-wrap;font-size:12px;color:#333;background:#fafafa;border:1px solid var(--b);border-radius:12px;padding:10px}
+    .right{margin-left:auto}
+  </style>
+</head>
+
+<body>
+  <h1>Bonierung – Admin</h1>
+
+  <!-- Header / Settings -->
+  <div class="card">
+    <div class="row">
+      <span class="pill">Offline-Testmodus</span>
+      <label class="row" style="gap:8px">
+        <input id="offlineToggle" type="checkbox" checked />
+        <span class="mut">AN (empfohlen fürs Testen)</span>
+      </label>
+
+      <span class="pill">Event-ID</span>
+      <input id="eventId" value="live-saufwertung-usv" />
+      <button id="btnLoad" class="primary">Event laden</button>
+
+      <span>Status: <span id="status" class="bad">offline</span></span>
+
+      <span class="right mut">Public-Link: <span id="publicLink" class="mono">—</span></span>
+    </div>
+
+    <div class="tabs" id="tabs">
+      <button class="tabbtn active" data-tab="tabBonieren">Bonieren</button>
+      <button class="tabbtn" data-tab="tabSetup">Setup</button>
+      <button class="tabbtn" data-tab="tabRanking">Ranking</button>
+      <button class="tabbtn" data-tab="tabJournal">Journal</button>
+      <button class="tabbtn" data-tab="tabAbrechnung">Abrechnung</button>
+    </div>
+
+    <div class="mut" style="margin-top:10px">
+      Siegerkriterium: <b>€ Alkohol pro Kopf</b>. Abrechnung enthält <b>alle Getränke</b> (Gesamtumsatz).
+    </div>
+  </div>
+
+  <!-- BONIEREN -->
+  <div class="card tab active" id="tabBonieren">
+    <div class="row" style="justify-content:space-between">
+      <div>
+        <div class="pill">Aktives Team: <span id="activeTeamLabel" class="mono">—</span></div>
+      </div>
+      <div class="pill">Letzte Buchung: <span id="lastBooking" class="mono">—</span></div>
+    </div>
+
+    <h3 style="margin:12px 0 8px">Team auswählen (Klick)</h3>
+    <div id="teamsGrid" class="gridTeams"></div>
+
+    <h3 style="margin:16px 0 8px">Getränk buchen (Klick → Menge)</h3>
+    <div id="drinksGrid" class="gridDrinks"></div>
+
+    <div class="mut" style="margin-top:12px">
+      Hinweis: Drinks sind bewusst neutral dargestellt (kein Alkohol-Highlight). Die Alkohol-Logik steckt im Hintergrund (für Ranking).
+    </div>
+  </div>
+
+  <!-- SETUP -->
+  <div class="card tab" id="tabSetup">
+    <h3 style="margin:0 0 8px">Teams</h3>
+    <div class="row">
+      <input id="teamName" placeholder="Teamname" />
+      <input id="teamPeople" type="number" min="1" placeholder="Personen" />
+      <button id="btnAddTeam" class="primary">Team speichern</button>
+      <span class="mut">Drag & Drop Reihenfolge unten.</span>
+    </div>
+
+    <div class="dragList" id="teamsDragList"></div>
+
+    <hr style="border:none;border-top:1px solid var(--b);margin:14px 0">
+
+    <h3 style="margin:0 0 8px">Getränke</h3>
+    <div class="row">
+      <input id="drinkName" placeholder="Getränk" />
+      <input id="drinkPrice" type="number" min="0" step="0.01" placeholder="Preis €" />
+      <label class="row" style="gap:8px">
+        <input id="drinkAlcoholic" type="checkbox" />
+        <span>alkoholisch</span>
+      </label>
+      <button id="btnAddDrink" class="primary">Getränk speichern</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr><th>Getränk</th><th>Preis</th><th>Alk.</th><th>Aktion</th></tr>
+      </thead>
+      <tbody id="drinksTableBody">
+        <tr><td colspan="4" class="mut">Noch keine Getränke.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- RANKING -->
+  <div class="card tab" id="tabRanking">
+    <div class="row">
+      <span class="pill">Siegerkriterium: <b>€ Alkohol / Kopf</b></span>
+      <span class="pill">Anzeige enthält zusätzlich: <b>Gesamtumsatz</b> (inkl. alkoholfrei)</span>
+      <span class="right pill">Gewinner: <span id="winner" class="mono">—</span></span>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Team</th>
+          <th>Personen</th>
+          <th>ALK €</th>
+          <th><b>ALK € / Kopf</b></th>
+          <th>alkoholfrei €</th>
+          <th><b>Gesamt €</b></th>
+        </tr>
+      </thead>
+      <tbody id="rankingBody">
+        <tr><td colspan="7" class="mut">Noch keine Daten.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="mut" style="margin-top:10px">
+      Personen kannst du jederzeit ändern (im Setup oder direkt hier per Klick).
+    </div>
+  </div>
+
+  <!-- JOURNAL -->
+  <div class="card tab" id="tabJournal">
+    <div class="row">
+      <input id="journalSearch" placeholder="Suche (Team/Drink)" />
+      <select id="journalTeamFilter">
+        <option value="">Alle Teams</option>
+      </select>
+      <select id="journalAlkFilter">
+        <option value="">Alle</option>
+        <option value="alk">Nur alkoholisch</option>
+        <option value="nonalk">Nur alkoholfrei</option>
+      </select>
+      <button id="btnExportCSV" class="ghost">CSV Export</button>
+      <span class="right mut">Storno = Gegenbuchung (audit-sicher).</span>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Zeit</th><th>Team</th><th>Getränk</th><th>Menge</th><th>Preis</th><th>Summe</th><th>Alk.</th><th>Aktion</th>
+        </tr>
+      </thead>
+      <tbody id="journalBody">
+        <tr><td colspan="8" class="mut">Noch keine Buchungen.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ABRECHNUNG -->
+  <div class="card tab" id="tabAbrechnung">
+    <div class="row">
+      <button id="btnPrintReceipts" class="ghost">Druckansicht</button>
+      <span class="right mut">„Bezahlt“ ist nur ein Status – Buchungen bleiben unverändert nachvollziehbar.</span>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Team</th><th>Personen</th><th>ALK €</th><th>alkoholfrei €</th><th><b>Gesamt €</b></th><th>Status</th><th>Aktion</th>
+        </tr>
+      </thead>
+      <tbody id="billingBody">
+        <tr><td colspan="7" class="mut">Noch keine Daten.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="card" style="background:var(--soft)">
+      <div class="mut">Team-Beleg (gruppiert nach Getränk) – wähle ein Team:</div>
+      <div class="row" style="margin-top:8px">
+        <select id="receiptTeam">
+          <option value="">Team wählen…</option>
+        </select>
+        <button id="btnShowReceipt" class="primary">Beleg anzeigen</button>
+      </div>
+      <div id="receiptBox" class="log" style="margin-top:10px">—</div>
+    </div>
+  </div>
+
+  <!-- Modal Menge -->
+  <div class="modalBackdrop" id="qtyModalBackdrop" aria-hidden="true">
+    <div class="modal">
+      <h3 id="qtyTitle">Menge wählen</h3>
+      <div class="row" style="margin:8px 0 10px">
+        <span class="pill">Team: <span id="qtyTeam" class="mono">—</span></span>
+        <span class="pill">Drink: <span id="qtyDrink" class="mono">—</span></span>
+        <span class="right pill">Preis: <span id="qtyPrice" class="mono">—</span></span>
+      </div>
+
+      <div class="qtyGrid" id="qtyGrid"></div>
+
+      <div class="row" style="margin-top:10px">
+        <button id="dec" class="qtyBtn">−</button>
+        <input id="qtyCustom" type="number" min="1" value="1" style="width:120px" />
+        <button id="inc" class="qtyBtn">+</button>
+        <span class="right pill">Summe: <span id="qtySum" class="mono">—</span></span>
+      </div>
+
+      <div class="modalFooter">
+        <button id="btnCancelQty">Abbrechen</button>
+        <button id="btnConfirmQty" class="primary">Buchen</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <span class="pill">Log</span>
+      <span class="right mut">Offline speichert in LocalStorage (Backup). Online-Sync kommt als nächster Schritt.</span>
+    </div>
+    <div id="log" class="log"></div>
+  </div>
+
+<script>
+/* =========================
+   OFFLINE-FIRST DATA MODEL
+   ========================= */
+const $ = (id)=>document.getElementById(id);
+const log = (m)=>{ $("log").textContent = new Date().toLocaleTimeString()+"  "+m+"\n"+$("log").textContent; };
+const money = (n)=> (Number(n||0)).toFixed(2);
+const nowTs = ()=> Date.now();
+const uid = ()=> "id_"+Math.random().toString(16).slice(2)+Date.now().toString(16);
+
+let state = {
+  eventId: null,
+  offline: true,
+  activeTeamId: null,
+
+  teams: [],      // {id,name,people,order}
+  drinks: [],     // {id,name,price,alcoholic}
+  orders: [],     // {id,ts,teamId,drinkId,qty,price,amount,alcoholic,kind:"sale"|"storno",refId?}
+  payments: {},   // teamId -> {paid:boolean, paidAt?, partialPaidEuro?}
+};
+
+const storageKey = ()=> `bonierung_admin_${state.eventId || "noevent"}`;
+
+/* =========================
+   TABS
+   ========================= */
+function setTab(tabId){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.querySelectorAll(".tabbtn").forEach(b=>b.classList.remove("active"));
+  $("#"+tabId).classList.add("active");
+  document.querySelector(`.tabbtn[data-tab="${tabId}"]`).classList.add("active");
+}
+
+$("tabs").addEventListener("click",(e)=>{
+  const btn = e.target.closest(".tabbtn");
+  if(!btn) return;
+  setTab(btn.dataset.tab);
+});
+
+/* =========================
+   EVENT LOAD / PERSISTENCE
+   ========================= */
+function setStatusOnline(yes){
+  $("status").textContent = yes ? "online" : "offline";
+  $("status").className = yes ? "ok" : "bad";
+}
+
+function publicUrlFor(eventId){
+  return `https://hussenbari-a11y.github.io/BonierungUSV/?event=${encodeURIComponent(eventId)}`;
+}
+
+function save(){
+  if(!state.eventId) return;
+  localStorage.setItem(storageKey(), JSON.stringify(state));
+}
+
+function load(){
+  if(!state.eventId) return;
+  const raw = localStorage.getItem(storageKey());
+  if(raw){
+    try{
+      const obj = JSON.parse(raw);
+      state = {...state, ...obj};
+    }catch{}
+  }
+}
+
+$("offlineToggle").addEventListener("change",()=>{
+  state.offline = $("offlineToggle").checked;
+  save();
+  log("Offline-Testmodus: " + (state.offline ? "AN" : "AUS"));
+});
+
+$("btnLoad").addEventListener("click",()=>{
+  const id = $("eventId").value.trim();
+  if(!id) return;
+
+  state.eventId = id;
+  $("publicLink").textContent = publicUrlFor(id);
+  load();
+  $("offlineToggle").checked = !!state.offline;
+
+  // default status online in offline-mode for usability
+  setStatusOnline(true);
+  log("Event geladen: "+id+" ("+(state.offline?"offline":"online")+")");
+
+  // Render all
+  renderAll();
+});
+
+/* =========================
+   TEAM CRUD + DRAG & DROP
+   ========================= */
+function upsertTeam(name, people){
+  const clean = name.trim();
+  if(!clean) return;
+
+  // If exists by name, update people
+  let t = state.teams.find(x=>x.name.toLowerCase()===clean.toLowerCase());
+  if(t){
+    t.people = Number(people);
+  }else{
+    const maxOrder = state.teams.reduce((m,x)=>Math.max(m, x.order||0), 0);
+    t = { id: uid(), name: clean, people: Number(people), order: maxOrder+1 };
+    state.teams.push(t);
+  }
+  save();
+  renderAll();
+}
+
+$("btnAddTeam").addEventListener("click",()=>{
+  const name = $("teamName").value;
+  const people = Number($("teamPeople").value);
+  if(!name.trim()) return;
+  if(!people || people<1) return alert("Personen muss >= 1 sein.");
+  upsertTeam(name, people);
+  $("teamName").value="";
+  $("teamPeople").value="";
+  log("Team gespeichert: "+name+" ("+people+")");
+});
+
+function deleteTeam(teamId){
+  if(!confirm("Team wirklich löschen? (Buchungen bleiben im Journal)")) return;
+  state.teams = state.teams.filter(t=>t.id!==teamId);
+  if(state.activeTeamId===teamId) state.activeTeamId=null;
+  save(); renderAll();
+}
+
+function renderTeamsSetup(){
+  const list = $("teamsDragList");
+  const sorted = [...state.teams].sort((a,b)=>(a.order||0)-(b.order||0));
+
+  if(!sorted.length){
+    list.innerHTML = `<div class="mut">Noch keine Teams.</div>`;
+    return;
+  }
+
+  list.innerHTML = "";
+  for(const t of sorted){
+    const div = document.createElement("div");
+    div.className="dragItem";
+    div.draggable = true;
+    div.dataset.id = t.id;
+
+    div.innerHTML = `
+      <span class="handle mono">☰</span>
+      <div class="grow">
+        <div><b>${escapeHtml(t.name)}</b></div>
+        <div class="mut">Personen: ${t.people}</div>
+      </div>
+      <button class="mini" data-edit="${t.id}">Personen ändern</button>
+      <button class="mini danger" data-del="${t.id}">Löschen</button>
+    `;
+    list.appendChild(div);
+  }
+
+  // Drag events
+  let dragId = null;
+  list.querySelectorAll(".dragItem").forEach(item=>{
+    item.addEventListener("dragstart",(e)=>{
+      dragId = item.dataset.id;
+      e.dataTransfer.effectAllowed = "move";
+    });
+    item.addEventListener("dragover",(e)=>{
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+    });
+    item.addEventListener("drop",(e)=>{
+      e.preventDefault();
+      const targetId = item.dataset.id;
+      if(!dragId || dragId===targetId) return;
+      reorderTeams(dragId, targetId);
+      dragId = null;
+    });
+  });
+
+  // Buttons
+  list.querySelectorAll("button").forEach(btn=>{
+    btn.addEventListener("click",(e)=>{
+      const edit = btn.dataset.edit;
+      const del = btn.dataset.del;
+      if(edit){
+        const t = state.teams.find(x=>x.id===edit);
+        const np = Number(prompt("Neue Personenanzahl:", String(t?.people||1)));
+        if(!np || np<1) return;
+        t.people = np;
+        save(); renderAll();
+        log("Personen geändert: "+t.name+" -> "+np);
+      }
+      if(del){
+        deleteTeam(del);
+        log("Team gelöscht");
+      }
+    });
+  });
+}
+
+function reorderTeams(dragId, targetId){
+  const sorted = [...state.teams].sort((a,b)=>(a.order||0)-(b.order||0));
+  const fromIdx = sorted.findIndex(t=>t.id===dragId);
+  const toIdx = sorted.findIndex(t=>t.id===targetId);
+  if(fromIdx<0 || toIdx<0) return;
+
+  const [moved] = sorted.splice(fromIdx,1);
+  sorted.splice(toIdx,0,moved);
+
+  // reassign orders
+  sorted.forEach((t,i)=>t.order=i+1);
+  state.teams = sorted;
+  save(); renderAll();
+  log("Team-Reihenfolge geändert");
+}
+
+/* =========================
+   DRINK CRUD
+   ========================= */
+function upsertDrink(name, price, alcoholic){
+  const clean = name.trim();
+  if(!clean) return;
+  let d = state.drinks.find(x=>x.name.toLowerCase()===clean.toLowerCase());
+  if(d){
+    d.price = Number(price);
+    d.alcoholic = !!alcoholic;
+  }else{
+    d = { id: uid(), name: clean, price: Number(price), alcoholic: !!alcoholic };
+    state.drinks.push(d);
+  }
+  save(); renderAll();
+}
+
+$("btnAddDrink").addEventListener("click",()=>{
+  const name = $("drinkName").value;
+  const price = Number($("drinkPrice").value);
+  const alcoholic = $("drinkAlcoholic").checked;
+  if(!name.trim()) return;
+  if(isNaN(price) || price<0) return alert("Preis ungültig.");
+  upsertDrink(name, price, alcoholic);
+  $("drinkName").value="";
+  $("drinkPrice").value="";
+  $("drinkAlcoholic").checked=false;
+  log("Getränk gespeichert: "+name+" (€ "+money(price)+")");
+});
+
+function deleteDrink(drinkId){
+  if(!confirm("Getränk wirklich löschen?")) return;
+  state.drinks = state.drinks.filter(d=>d.id!==drinkId);
+  save(); renderAll();
+}
+
+function renderDrinksSetup(){
+  const tb = $("drinksTableBody");
+  const rows = [...state.drinks].sort((a,b)=>a.name.localeCompare(b.name,"de"));
+  if(!rows.length){
+    tb.innerHTML = `<tr><td colspan="4" class="mut">Noch keine Getränke.</td></tr>`;
+    return;
+  }
+  tb.innerHTML = "";
+  for(const d of rows){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHtml(d.name)}</td>
+      <td>€ ${money(d.price)}</td>
+      <td>${d.alcoholic ? "ja" : "nein"}</td>
+      <td><button class="mini danger" data-del="${d.id}">Löschen</button></td>
+    `;
+    tb.appendChild(tr);
+  }
+  tb.querySelectorAll("button[data-del]").forEach(btn=>{
+    btn.addEventListener("click",()=>{ deleteDrink(btn.dataset.del); log("Getränk gelöscht"); });
+  });
+}
+
+/* =========================
+   BONIEREN UI
+   ========================= */
+function setActiveTeam(teamId){
+  state.activeTeamId = teamId;
+  save();
+  renderBonierenTeams();
+  $("activeTeamLabel").textContent = getTeam(teamId)?.name || "—";
+}
+
+function getTeam(id){ return state.teams.find(t=>t.id===id); }
+function getDrink(id){ return state.drinks.find(d=>d.id===id); }
+
+function renderBonierenTeams(){
+  const grid = $("teamsGrid");
+  const teams = [...state.teams].sort((a,b)=>(a.order||0)-(b.order||0));
+  grid.innerHTML = teams.length ? "" : `<div class="mut">Noch keine Teams. Bitte im Setup anlegen.</div>`;
+  for(const t of teams){
+    const btn = document.createElement("button");
+    btn.className = "teamTile" + (t.id===state.activeTeamId ? " active" : "");
+    btn.innerHTML = `
+      <div class="teamName">${escapeHtml(t.name)}</div>
+      <div class="teamMeta">${t.people} Personen</div>
+    `;
+    btn.addEventListener("click",()=>setActiveTeam(t.id));
+    grid.appendChild(btn);
+  }
+}
+
+let pending = { teamId:null, drinkId:null, qty:1 };
+
+function openQtyModal(teamId, drinkId){
+  const t = getTeam(teamId);
+  const d = getDrink(drinkId);
+  if(!t || !d) return;
+
+  pending = { teamId, drinkId, qty:1 };
+
+  $("qtyTeam").textContent = t.name;
+  $("qtyDrink").textContent = d.name;
+  $("qtyPrice").textContent = "€ "+money(d.price);
+  $("qtyCustom").value = 1;
+  updateQtySum();
+
+  const quick = [1,2,3,5,10,20];
+  const grid = $("qtyGrid");
+  grid.innerHTML = "";
+  for(const q of quick){
+    const b = document.createElement("button");
+    b.className = "qtyBtn";
+    b.textContent = String(q);
+    b.addEventListener("click",()=>{
+      $("qtyCustom").value = q;
+      updateQtySum();
+    });
+    grid.appendChild(b);
+  }
+
+  $("qtyModalBackdrop").classList.add("show");
+  $("qtyModalBackdrop").setAttribute("aria-hidden","false");
+}
+
+function closeQtyModal(){
+  $("qtyModalBackdrop").classList.remove("show");
+  $("qtyModalBackdrop").setAttribute("aria-hidden","true");
+}
+
+function updateQtySum(){
+  const d = getDrink(pending.drinkId);
+  const q = Math.max(1, Number($("qtyCustom").value||1));
+  pending.qty = q;
+  const sum = (d?.price||0)*q;
+  $("qtySum").textContent = "€ "+money(sum);
+}
+
+$("qtyCustom").addEventListener("input",updateQtySum);
+$("inc").addEventListener("click",()=>{ $("qtyCustom").value = Math.max(1, Number($("qtyCustom").value||1)+1); updateQtySum(); });
+$("dec").addEventListener("click",()=>{ $("qtyCustom").value = Math.max(1, Number($("qtyCustom").value||1)-1); updateQtySum(); });
+$("btnCancelQty").addEventListener("click",closeQtyModal);
+
+$("btnConfirmQty").addEventListener("click",()=>{
+  const q = Math.max(1, Number($("qtyCustom").value||1));
+  book(pending.teamId, pending.drinkId, q);
+  closeQtyModal();
+});
+
+$("qtyModalBackdrop").addEventListener("click",(e)=>{
+  if(e.target === $("qtyModalBackdrop")) closeQtyModal();
+});
+
+function renderBonierenDrinks(){
+  const grid = $("drinksGrid");
+  const drinks = [...state.drinks].sort((a,b)=>a.name.localeCompare(b.name,"de"));
+  grid.innerHTML = drinks.length ? "" : `<div class="mut">Noch keine Getränke. Bitte im Setup anlegen.</div>`;
+
+  for(const d of drinks){
+    const btn = document.createElement("button");
+    btn.className = "drinkTile";
+    btn.innerHTML = `
+      <div class="drinkName">${escapeHtml(d.name)}</div>
+      <div class="drinkPrice">€ ${money(d.price)}</div>
+    `;
+    btn.addEventListener("click",()=>{
+      if(!state.activeTeamId) return alert("Bitte zuerst ein Team anklicken.");
+      openQtyModal(state.activeTeamId, d.id);
+    });
+    grid.appendChild(btn);
+  }
+}
+
+/* =========================
+   BOOKING + JOURNAL + STORNO
+   ========================= */
+function book(teamId, drinkId, qty){
+  const t = getTeam(teamId);
+  const d = getDrink(drinkId);
+  if(!t || !d) return;
+
+  const amount = d.price * qty;
+
+  const entry = {
+    id: uid(),
+    ts: nowTs(),
+    teamId,
+    drinkId,
+    qty,
+    price: d.price,
+    amount,
+    alcoholic: !!d.alcoholic,
+    kind: "sale"
+  };
+
+  state.orders.push(entry);
+  save();
+  renderAll();
+
+  $("lastBooking").textContent = `${t.name}: ${qty}× ${d.name} = € ${money(amount)}`;
+  log(`Buchung: ${t.name} +${qty}× ${d.name} (€ ${money(amount)})`);
+}
+
+function storno(orderId){
+  const orig = state.orders.find(o=>o.id===orderId);
+  if(!orig) return;
+  if(orig.kind==="storno") return;
+
+  const t = getTeam(orig.teamId);
+  const d = getDrink(orig.drinkId);
+
+  const entry = {
+    id: uid(),
+    ts: nowTs(),
+    teamId: orig.teamId,
+    drinkId: orig.drinkId,
+    qty: -Math.abs(orig.qty),
+    price: orig.price,
+    amount: -Math.abs(orig.amount),
+    alcoholic: !!orig.alcoholic,
+    kind: "storno",
+    refId: orig.id
+  };
+
+  state.orders.push(entry);
+  save();
+  renderAll();
+  log(`STORNO: ${t?.name||"?"} ${d?.name||"?"} (${orig.id})`);
+}
+
+/* =========================
+   AGGREGATES
+   ========================= */
+function calcAggregates(){
+  // per team: alkEuro, nonAlkEuro, totalEuro
+  const agg = {};
+  for(const t of state.teams){
+    agg[t.id] = { teamId:t.id, name:t.name, people:t.people, alkEuro:0, nonAlkEuro:0, totalEuro:0 };
+  }
+
+  for(const o of state.orders){
+    // ignore teams that were deleted? keep if missing
+    if(!agg[o.teamId]){
+      agg[o.teamId] = { teamId:o.teamId, name:"(gelöscht)", people:0, alkEuro:0, nonAlkEuro:0, totalEuro:0 };
+    }
+    if(o.alcoholic) agg[o.teamId].alkEuro += o.amount;
+    else agg[o.teamId].nonAlkEuro += o.amount;
+    agg[o.teamId].totalEuro += o.amount;
+  }
+
+  // avoid negative 0.00 display
+  for(const k in agg){
+    const a = agg[k];
+    a.alkEuro = Number(a.alkEuro.toFixed(2));
+    a.nonAlkEuro = Number(a.nonAlkEuro.toFixed(2));
+    a.totalEuro = Number(a.totalEuro.toFixed(2));
+  }
+
+  return agg;
+}
+
+/* =========================
+   RENDER: RANKING / JOURNAL / BILLING
+   ========================= */
+function renderRanking(){
+  const body = $("rankingBody");
+  const agg = calcAggregates();
+
+  const rows = Object.values(agg).map(a=>{
+    const perHead = a.people ? (a.alkEuro / a.people) : 0;
+    return { ...a, alkPerHead: perHead };
+  }).sort((x,y)=> y.alkPerHead - x.alkPerHead);
+
+  if(!rows.length){
+    body.innerHTML = `<tr><td colspan="7" class="mut">Noch keine Daten.</td></tr>`;
+    $("winner").textContent = "—";
+    return;
+  }
+
+  body.innerHTML = "";
+  rows.forEach((r,i)=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${i+1}</td>
+      <td>${escapeHtml(r.name)}</td>
+      <td>
+        <button class="mini" data-people="${r.teamId}">${r.people || 0}</button>
+      </td>
+      <td>€ ${money(r.alkEuro)}</td>
+      <td><b>€ ${money(r.alkPerHead)}</b></td>
+      <td>€ ${money(r.nonAlkEuro)}</td>
+      <td><b>€ ${money(r.totalEuro)}</b></td>
+    `;
+    body.appendChild(tr);
+  });
+
+  const winner = rows[0];
+  $("winner").textContent = winner ? `${winner.name} (€ ${money(winner.alkPerHead)} / Kopf)` : "—";
+
+  // quick people edit from ranking
+  body.querySelectorAll("button[data-people]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const teamId = btn.dataset.people;
+      const t = state.teams.find(x=>x.id===teamId);
+      if(!t) return;
+      const np = Number(prompt("Neue Personenanzahl:", String(t.people||1)));
+      if(!np || np<1) return;
+      t.people = np;
+      save(); renderAll();
+      log(`Personen geändert: ${t.name} -> ${np}`);
+    });
+  });
+}
+
+function renderJournal(){
+  const body = $("journalBody");
+  const search = ($("journalSearch").value||"").toLowerCase();
+  const teamFilter = $("journalTeamFilter").value;
+  const alkFilter = $("journalAlkFilter").value;
+
+  const orders = [...state.orders].sort((a,b)=>b.ts-a.ts);
+
+  const rows = orders.filter(o=>{
+    const t = getTeam(o.teamId);
+    const d = getDrink(o.drinkId);
+    const hay = `${t?.name||""} ${d?.name||""}`.toLowerCase();
+    if(search && !hay.includes(search)) return false;
+    if(teamFilter && o.teamId!==teamFilter) return false;
+    if(alkFilter==="alk" && !o.alcoholic) return false;
+    if(alkFilter==="nonalk" && o.alcoholic) return false;
+    return true;
+  });
+
+  if(!rows.length){
+    body.innerHTML = `<tr><td colspan="8" class="mut">Keine passenden Buchungen.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = "";
+  for(const o of rows){
+    const t = getTeam(o.teamId);
+    const d = getDrink(o.drinkId);
+    const dt = new Date(o.ts);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${dt.toLocaleTimeString()}</td>
+      <td>${escapeHtml(t?.name || "(gelöscht)")}</td>
+      <td>${escapeHtml(d?.name || "(gelöscht)")}</td>
+      <td>${o.qty}</td>
+      <td>€ ${money(o.price)}</td>
+      <td>€ ${money(o.amount)}</td>
+      <td>${o.alcoholic ? "ja" : "nein"}</td>
+      <td>
+        ${o.kind==="sale" ? `<button class="mini danger" data-storno="${o.id}">Storno</button>` : `<span class="mut">storno</span>`}
+      </td>
+    `;
+    body.appendChild(tr);
+  }
+
+  body.querySelectorAll("button[data-storno]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      if(!confirm("Diese Buchung stornieren (Gegenbuchung)?")) return;
+      storno(btn.dataset.storno);
+    });
+  });
+}
+
+function renderBilling(){
+  const body = $("billingBody");
+  const agg = calcAggregates();
+  const teams = [...state.teams].sort((a,b)=>(a.order||0)-(b.order||0));
+
+  if(!teams.length){
+    body.innerHTML = `<tr><td colspan="7" class="mut">Noch keine Daten.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = "";
+  for(const t of teams){
+    const a = agg[t.id] || { alkEuro:0, nonAlkEuro:0, totalEuro:0, people:t.people };
+    const pay = state.payments[t.id] || { paid:false, partialPaidEuro:0 };
+    const open = Math.max(0, (a.totalEuro - (pay.partialPaidEuro||0)));
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escapeHtml(t.name)}</td>
+      <td>${t.people}</td>
+      <td>€ ${money(a.alkEuro)}</td>
+      <td>€ ${money(a.nonAlkEuro)}</td>
+      <td><b>€ ${money(a.totalEuro)}</b></td>
+      <td>${pay.paid ? `<span class="ok">bezahlt</span>` : `<span class="bad">offen € ${money(open)}</span>`}</td>
+      <td>
+        <button class="mini" data-paid="${t.id}">Als bezahlt</button>
+        <button class="mini" data-partial="${t.id}">Teilzahlung</button>
+        <button class="mini danger" data-resetpay="${t.id}">Reset</button>
+      </td>
+    `;
+    body.appendChild(tr);
+  }
+
+  body.querySelectorAll("button[data-paid]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const id = btn.dataset.paid;
+      const agg = calcAggregates();
+      const total = agg[id]?.totalEuro || 0;
+      state.payments[id] = { paid:true, paidAt: nowTs(), partialPaidEuro: total };
+      save(); renderAll();
+      log("Bezahlt: "+(getTeam(id)?.name||id));
+    });
+  });
+
+  body.querySelectorAll("button[data-partial]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const id = btn.dataset.partial;
+      const agg = calcAggregates();
+      const total = agg[id]?.totalEuro || 0;
+      const cur = state.payments[id]?.partialPaidEuro || 0;
+      const add = Number(prompt(`Teilzahlung € hinzufügen (bisher € ${money(cur)} von € ${money(total)}):`, "0"));
+      if(!add || add<=0) return;
+      const next = cur + add;
+      state.payments[id] = {
+        paid: next >= total,
+        paidAt: next >= total ? nowTs() : (state.payments[id]?.paidAt || null),
+        partialPaidEuro: next
+      };
+      save(); renderAll();
+      log("Teilzahlung: "+(getTeam(id)?.name||id)+" +€ "+money(add));
+    });
+  });
+
+  body.querySelectorAll("button[data-resetpay]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const id = btn.dataset.resetpay;
+      if(!confirm("Zahlstatus zurücksetzen?")) return;
+      delete state.payments[id];
+      save(); renderAll();
+      log("Zahlstatus reset");
+    });
+  });
+
+  // receipt team dropdown
+  const sel = $("receiptTeam");
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">Team wählen…</option>` + teams.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join("");
+  if(teams.some(t=>t.id===cur)) sel.value=cur;
+}
+
+$("btnShowReceipt").addEventListener("click",()=>{
+  const teamId = $("receiptTeam").value;
+  if(!teamId) return;
+  const t = getTeam(teamId);
+  const items = receiptForTeam(teamId);
+  $("receiptBox").textContent = formatReceipt(t?.name||"(Team)", items);
+});
+
+function receiptForTeam(teamId){
+  // group by drink
+  const map = new Map();
+  for(const o of state.orders.filter(x=>x.teamId===teamId)){
+    const d = getDrink(o.drinkId);
+    const key = d?.name || "(gelöscht)";
+    const cur = map.get(key) || { name:key, qty:0, euro:0 };
+    cur.qty += o.qty;
+    cur.euro += o.amount;
+    map.set(key, cur);
+  }
+  return [...map.values()].filter(x=>x.qty!==0 || x.euro!==0).sort((a,b)=>b.euro-a.euro);
+}
+
+function formatReceipt(teamName, items){
+  const lines = [];
+  lines.push(`Beleg: ${teamName}`);
+  lines.push(`--------------------------------`);
+  let total = 0;
+  for(const it of items){
+    lines.push(`${it.qty}× ${it.name}  =  € ${money(it.euro)}`);
+    total += it.euro;
+  }
+  lines.push(`--------------------------------`);
+  lines.push(`TOTAL: € ${money(total)}`);
+  return lines.join("\n");
+}
+
+/* =========================
+   EXPORT CSV
+   ========================= */
+$("btnExportCSV").addEventListener("click",()=>{
+  const rows = [];
+  rows.push(["ts","time","team","drink","qty","price","amount","alcoholic","kind","refId"].join(","));
+  for(const o of [...state.orders].sort((a,b)=>a.ts-b.ts)){
+    const t = getTeam(o.teamId);
+    const d = getDrink(o.drinkId);
+    const dt = new Date(o.ts);
+    rows.push([
+      o.ts,
+      dt.toLocaleString(),
+      csv(t?.name||"(gelöscht)"),
+      csv(d?.name||"(gelöscht)"),
+      o.qty,
+      money(o.price),
+      money(o.amount),
+      o.alcoholic ? "yes":"no",
+      o.kind,
+      o.refId || ""
+    ].join(","));
+  }
+  downloadText(`journal_${state.eventId||"event"}.csv`, rows.join("\n"));
+});
+
+function csv(s){
+  const x = String(s ?? "");
+  if(/[,"\n]/.test(x)) return `"${x.replace(/"/g,'""')}"`;
+  return x;
+}
+function downloadText(filename, text){
+  const blob = new Blob([text], {type:"text/csv;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* =========================
+   PRINT
+   ========================= */
+$("btnPrintReceipts").addEventListener("click",()=>{
+  const teams = [...state.teams].sort((a,b)=>(a.order||0)-(b.order||0));
+  let html = `<h2>Abrechnung – ${escapeHtml(state.eventId||"")}</h2>`;
+  for(const t of teams){
+    const items = receiptForTeam(t.id);
+    html += `<pre>${escapeHtml(formatReceipt(t.name, items))}</pre><hr/>`;
+  }
+  const w = window.open("", "_blank");
+  w.document.write(`<html><head><title>Abrechnung</title></head><body>${html}</body></html>`);
+  w.document.close();
+  w.focus();
+  w.print();
+});
+
+/* =========================
+   FILTER DROPDOWNS
+   ========================= */
+$("journalSearch").addEventListener("input",()=>renderJournal());
+$("journalTeamFilter").addEventListener("change",()=>renderJournal());
+$("journalAlkFilter").addEventListener("change",()=>renderJournal());
+
+function renderJournalFilters(){
+  const sel = $("journalTeamFilter");
+  const cur = sel.value;
+  const teams = [...state.teams].sort((a,b)=>(a.order||0)-(b.order||0));
+  sel.innerHTML = `<option value="">Alle Teams</option>` + teams.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join("");
+  if(cur && teams.some(t=>t.id===cur)) sel.value=cur;
+}
+
+/* =========================
+   MAIN RENDER
+   ========================= */
+function renderAll(){
+  // keep activeTeamLabel updated
+  $("activeTeamLabel").textContent = getTeam(state.activeTeamId)?.name || "—";
+
+  renderTeamsSetup();
+  renderDrinksSetup();
+  renderBonierenTeams();
+  renderBonierenDrinks();
+  renderJournalFilters();
+  renderRanking();
+  renderJournal();
+  renderBilling();
+}
+
+/* =========================
+   UTIL
+   ========================= */
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+</script>
+
+</body>
+</html>
