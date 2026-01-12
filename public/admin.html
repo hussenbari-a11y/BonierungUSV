@@ -34,6 +34,15 @@
             color: var(--gray-800);
         }
 
+        /* Hide main content until authenticated */
+        .app-content {
+            display: none;
+        }
+
+        .app-content.visible {
+            display: block;
+        }
+
         .header {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
@@ -362,7 +371,6 @@
             text-align: center;
         }
 
-        /* Bonierung Layout mit Team-Sidebar */
         .bonierung-layout {
             display: grid;
             grid-template-columns: 180px 1fr;
@@ -437,7 +445,6 @@
             margin-bottom: 0;
         }
 
-        /* Team Summary Accordion Styles */
         .team-summary {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
@@ -515,7 +522,6 @@
             font-style: italic;
         }
 
-        /* Toast Styles */
         .toast-container {
             position: fixed;
             top: 1rem;
@@ -558,26 +564,15 @@
         }
 
         @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
 
         @keyframes fadeOut {
-            from {
-                opacity: 1;
-            }
-            to {
-                opacity: 0;
-            }
+            from { opacity: 1; }
+            to { opacity: 0; }
         }
 
-        /* Timer Styles */
         .timer-card {
             background: linear-gradient(135deg, var(--warning) 0%, #d97706 100%);
             color: white;
@@ -631,6 +626,65 @@
             margin-top: 0.75rem;
             font-size: 0.875rem;
             opacity: 0.9;
+        }
+
+        /* Login Screen Styles */
+        .login-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 1rem;
+        }
+
+        .login-screen.hidden {
+            display: none;
+        }
+
+        .login-box {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        .login-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .login-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .login-subtitle {
+            color: var(--gray-600);
+            margin-bottom: 1.5rem;
+        }
+
+        .login-error {
+            background: #fef2f2;
+            color: var(--danger);
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .login-error.visible {
+            display: block;
         }
 
         .modal-overlay {
@@ -750,191 +804,194 @@
     </style>
 </head>
 <body>
-<div class="header">
-    <h1>🍺 Bonierung Admin</h1>
-</div>
 
-<div class="tabs">
-    <button class="tab active" data-tab="bonierung">Bonierung</button>
-    <button class="tab" data-tab="teams">Teams</button>
-    <button class="tab" data-tab="items">Speisen/Getränke</button>
-    <button class="tab" data-tab="uebersicht">Übersicht</button>
-    <button class="tab" data-tab="timer">⏱️ Timer</button>
-</div>
-
-<!-- Tab 1: Bonierung -->
-<div id="bonierung" class="tab-content active">
-    <div class="bonierung-layout">
-        <div class="team-sidebar">
-            <div class="team-sidebar-title">👥 Team wählen</div>
-            <div id="team-list" class="team-list"></div>
+<!-- Login Screen -->
+<div class="login-screen" id="login-screen">
+    <div class="login-box">
+        <div class="login-icon">🔒</div>
+        <h1 class="login-title">Admin-Bereich</h1>
+        <p class="login-subtitle">Bitte Passwort eingeben um fortzufahren</p>
+        <div class="login-error" id="login-error">Falsches Passwort!</div>
+        <div class="form-group">
+            <input type="password" id="login-password" placeholder="Passwort" autofocus>
         </div>
+        <button class="btn btn-primary" onclick="handleLogin()">🔓 Anmelden</button>
+    </div>
+</div>
 
-        <div class="bonierung-main">
-            <div class="card">
-                <h2 class="card-title">🍺 Getränke</h2>
-                <div id="drinks-grid" class="item-grid"></div>
+<!-- Main App Content (hidden until authenticated) -->
+<div class="app-content" id="app-content">
+    <div class="header">
+        <h1>🍺 Bonierung Admin</h1>
+    </div>
+
+    <div class="tabs">
+        <button class="tab active" data-tab="bonierung">Bonierung</button>
+        <button class="tab" data-tab="teams">Teams</button>
+        <button class="tab" data-tab="items">Speisen/Getränke</button>
+        <button class="tab" data-tab="uebersicht">Übersicht</button>
+        <button class="tab" data-tab="timer">⏱️ Timer</button>
+    </div>
+
+    <!-- Tab 1: Bonierung -->
+    <div id="bonierung" class="tab-content active">
+        <div class="bonierung-layout">
+            <div class="team-sidebar">
+                <div class="team-sidebar-title">👥 Team wählen</div>
+                <div id="team-list" class="team-list"></div>
             </div>
 
-            <div class="card">
-                <h2 class="card-title">🍽️ Speisen</h2>
-                <div id="food-grid" class="item-grid"></div>
-            </div>
-
-            <div id="selected-item-section" class="card" style="display: none;">
-                <h2 class="card-title">Ausgewählt: <span id="selected-item-name"></span></h2>
-                <div class="quantity-control">
-                    <button class="quantity-btn" onclick="changeQuantity(-1)">−</button>
-                    <div class="quantity-display" id="quantity">1</div>
-                    <button class="quantity-btn" onclick="changeQuantity(1)">+</button>
+            <div class="bonierung-main">
+                <div class="card">
+                    <h2 class="card-title">🍺 Getränke</h2>
+                    <div id="drinks-grid" class="item-grid"></div>
                 </div>
-                <button class="btn btn-success" onclick="addConsumption()">✓ Bonieren</button>
+
+                <div class="card">
+                    <h2 class="card-title">🍽️ Speisen</h2>
+                    <div id="food-grid" class="item-grid"></div>
+                </div>
+
+                <div id="selected-item-section" class="card" style="display: none;">
+                    <h2 class="card-title">Ausgewählt: <span id="selected-item-name"></span></h2>
+                    <div class="quantity-control">
+                        <button class="quantity-btn" onclick="changeQuantity(-1)">−</button>
+                        <div class="quantity-display" id="quantity">1</div>
+                        <button class="quantity-btn" onclick="changeQuantity(1)">+</button>
+                    </div>
+                    <button class="btn btn-success" onclick="addConsumption()">✓ Bonieren</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Tab 2: Teams -->
-<div id="teams" class="tab-content">
-    <div class="card">
-        <h2 class="card-title">Neues Team hinzufügen</h2>
-        <div class="form-group">
-            <label>Teamname</label>
-            <input type="text" id="team-name" placeholder="z.B. USV">
+    <!-- Tab 2: Teams -->
+    <div id="teams" class="tab-content">
+        <div class="card">
+            <h2 class="card-title">Neues Team hinzufügen</h2>
+            <div class="form-group">
+                <label>Teamname</label>
+                <input type="text" id="team-name" placeholder="z.B. USV">
+            </div>
+            <div class="form-group">
+                <label>Personenanzahl</label>
+                <input type="number" id="team-persons" min="1" value="11">
+            </div>
+            <button class="btn btn-primary" onclick="addTeam()">Team hinzufügen</button>
         </div>
-        <div class="form-group">
-            <label>Personenanzahl</label>
-            <input type="number" id="team-persons" min="1" value="11">
+
+        <div class="card">
+            <h2 class="card-title">Alle Teams</h2>
+            <div id="teams-list"></div>
         </div>
-        <button class="btn btn-primary" onclick="addTeam()">Team hinzufügen</button>
     </div>
 
-    <div class="card">
-        <h2 class="card-title">Alle Teams</h2>
-        <div id="teams-list"></div>
-    </div>
-</div>
+    <!-- Tab 3: Items -->
+    <div id="items" class="tab-content">
+        <div class="card">
+            <h2 class="card-title">Neue Speise/Getränk hinzufügen</h2>
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="item-name" placeholder="z.B. Bier 0.5l">
+            </div>
+            <div class="form-group">
+                <label>Preis (€)</label>
+                <input type="number" id="item-price" min="0" step="0.10" value="3.50">
+            </div>
+            <div class="form-group">
+                <label>Typ</label>
+                <select id="item-type">
+                    <option value="drink">Getränk</option>
+                    <option value="food">Speise</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="item-alcoholic">
+                    <label for="item-alcoholic" style="margin: 0;">Alkoholisch</label>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="addItem()">Hinzufügen</button>
+        </div>
 
-<!-- Tab 3: Items -->
-<div id="items" class="tab-content">
-    <div class="card">
-        <h2 class="card-title">Neue Speise/Getränk hinzufügen</h2>
-        <div class="form-group">
-            <label>Name</label>
-            <input type="text" id="item-name" placeholder="z.B. Bier 0.5l">
+        <div class="card">
+            <h2 class="card-title">Alle Speisen & Getränke</h2>
+            <div id="items-list"></div>
         </div>
-        <div class="form-group">
-            <label>Preis (€)</label>
-            <input type="number" id="item-price" min="0" step="0.10" value="3.50">
+    </div>
+
+    <!-- Tab 4: Übersicht -->
+    <div id="uebersicht" class="tab-content">
+        <div id="team-summaries"></div>
+    </div>
+
+    <!-- Tab 5: Timer -->
+    <div id="timer" class="tab-content">
+        <div class="card timer-card">
+            <h2 class="card-title">⏱️ Countdown Timer</h2>
+            <div class="timer-display" id="timer-display">00:00:00</div>
+            <div class="timer-inputs">
+                <div class="form-group" style="flex: 1;">
+                    <label>Stunden</label>
+                    <input type="number" id="timer-hours" min="0" max="23" value="0" placeholder="HH">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>Minuten</label>
+                    <input type="number" id="timer-minutes" min="0" max="59" value="10" placeholder="MM">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>Sekunden</label>
+                    <input type="number" id="timer-seconds" min="0" max="59" value="0" placeholder="SS">
+                </div>
+            </div>
+            <div class="timer-buttons">
+                <button class="btn btn-success" onclick="setTimer()">⏱️ Setzen</button>
+                <button class="btn btn-primary" onclick="startTimer()" id="start-btn">▶️ Start</button>
+                <button class="btn btn-danger" onclick="stopTimer()">⏹️ Stop</button>
+            </div>
+            <div class="timer-buttons" style="margin-top: 0.5rem;">
+                <button class="btn btn-warning" onclick="resetTimer()">🔄 Reset</button>
+            </div>
+            <div class="timer-status" id="timer-status">Timer nicht aktiv</div>
         </div>
-        <div class="form-group">
-            <label>Typ</label>
-            <select id="item-type">
-                <option value="drink">Getränk</option>
-                <option value="food">Speise</option>
-            </select>
+
+        <div class="card">
+            <h2 class="card-title">ℹ️ Hinweise</h2>
+            <ul style="padding-left: 1.25rem; color: var(--gray-600);">
+                <li style="margin-bottom: 0.5rem;">Zeit eingeben und <strong>"Setzen"</strong> klicken um den Timer zu konfigurieren</li>
+                <li style="margin-bottom: 0.5rem;"><strong>"Start"</strong> startet den Countdown</li>
+                <li style="margin-bottom: 0.5rem;"><strong>"Stop"</strong> pausiert den Timer (Zeit bleibt erhalten)</li>
+                <li style="margin-bottom: 0.5rem;"><strong>"Reset"</strong> setzt den Timer auf 0 zurück</li>
+                <li>Der Timer wird automatisch auf der Ranking-Seite angezeigt</li>
+            </ul>
         </div>
-        <div class="form-group">
-            <div class="checkbox-group">
-                <input type="checkbox" id="item-alcoholic">
-                <label for="item-alcoholic" style="margin: 0;">Alkoholisch</label>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Edit Team Modal -->
+    <div id="edit-team-modal" class="modal-overlay">
+        <div class="modal">
+            <h3 class="modal-title">✏️ Team bearbeiten</h3>
+            <div class="form-group">
+                <label>Teamname</label>
+                <input type="text" id="edit-team-name" readonly style="background: var(--gray-100);">
+            </div>
+            <div class="form-group">
+                <label>Personenanzahl</label>
+                <input type="number" id="edit-team-persons" min="1">
+            </div>
+            <input type="hidden" id="edit-team-id">
+            <div style="display: flex; gap: 0.5rem;">
+                <button class="btn btn-primary" onclick="saveTeamEdit()">Speichern</button>
+                <button class="btn" style="background: var(--gray-200);" onclick="cancelTeamEdit()">Abbrechen</button>
             </div>
         </div>
-        <button class="btn btn-primary" onclick="addItem()">Hinzufügen</button>
     </div>
 
-    <div class="card">
-        <h2 class="card-title">Alle Speisen & Getränke</h2>
-        <div id="items-list"></div>
-    </div>
+    <a href="index.html" class="admin-link">→ Zum Ranking</a>
 </div>
-
-<!-- Tab 4: Übersicht -->
-<div id="uebersicht" class="tab-content">
-    <div id="team-summaries"></div>
-</div>
-
-<!-- Tab 5: Timer -->
-<div id="timer" class="tab-content">
-    <div class="card timer-card">
-        <h2 class="card-title">⏱️ Countdown Timer</h2>
-        <div class="timer-display" id="timer-display">00:00:00</div>
-        <div class="timer-inputs">
-            <div class="form-group" style="flex: 1;">
-                <label>Stunden</label>
-                <input type="number" id="timer-hours" min="0" max="23" value="0" placeholder="HH">
-            </div>
-            <div class="form-group" style="flex: 1;">
-                <label>Minuten</label>
-                <input type="number" id="timer-minutes" min="0" max="59" value="10" placeholder="MM">
-            </div>
-            <div class="form-group" style="flex: 1;">
-                <label>Sekunden</label>
-                <input type="number" id="timer-seconds" min="0" max="59" value="0" placeholder="SS">
-            </div>
-        </div>
-        <div class="timer-buttons">
-            <button class="btn btn-success" onclick="setTimer()">⏱️ Setzen</button>
-            <button class="btn btn-primary" onclick="startTimer()" id="start-btn">▶️ Start</button>
-            <button class="btn btn-danger" onclick="stopTimer()">⏹️ Stop</button>
-        </div>
-        <div class="timer-buttons" style="margin-top: 0.5rem;">
-            <button class="btn btn-warning" onclick="resetTimer()">🔄 Reset</button>
-        </div>
-        <div class="timer-status" id="timer-status">Timer nicht aktiv</div>
-    </div>
-
-    <div class="card">
-        <h2 class="card-title">ℹ️ Hinweise</h2>
-        <ul style="padding-left: 1.25rem; color: var(--gray-600);">
-            <li style="margin-bottom: 0.5rem;">Zeit eingeben und <strong>"Setzen"</strong> klicken um den Timer zu konfigurieren</li>
-            <li style="margin-bottom: 0.5rem;"><strong>"Start"</strong> startet den Countdown</li>
-            <li style="margin-bottom: 0.5rem;"><strong>"Stop"</strong> pausiert den Timer (Zeit bleibt erhalten)</li>
-            <li style="margin-bottom: 0.5rem;"><strong>"Reset"</strong> setzt den Timer auf 0 zurück</li>
-            <li>Der Timer wird automatisch auf der Ranking-Seite angezeigt</li>
-        </ul>
-    </div>
-</div>
-
-<!-- Toast Container -->
-<div class="toast-container" id="toast-container"></div>
-
-<!-- Password Modal -->
-<div id="password-modal" class="modal-overlay">
-    <div class="modal">
-        <h3 class="modal-title">🔒 Admin-Bereich</h3>
-        <p style="margin-bottom: 1rem; color: var(--gray-600);">Bitte Passwort eingeben:</p>
-        <div class="form-group">
-            <input type="password" id="password-input" placeholder="Passwort">
-        </div>
-        <div style="display: flex; gap: 0.5rem;">
-            <button class="btn btn-primary" onclick="checkPassword()">Bestätigen</button>
-            <button class="btn" style="background: var(--gray-200);" onclick="cancelPassword()">Abbrechen</button>
-        </div>
-    </div>
-</div>
-
-<!-- Edit Team Modal -->
-<div id="edit-team-modal" class="modal-overlay">
-    <div class="modal">
-        <h3 class="modal-title">✏️ Team bearbeiten</h3>
-        <div class="form-group">
-            <label>Teamname</label>
-            <input type="text" id="edit-team-name" readonly style="background: var(--gray-100);">
-        </div>
-        <div class="form-group">
-            <label>Personenanzahl</label>
-            <input type="number" id="edit-team-persons" min="1">
-        </div>
-        <input type="hidden" id="edit-team-id">
-        <div style="display: flex; gap: 0.5rem;">
-            <button class="btn btn-primary" onclick="saveTeamEdit()">Speichern</button>
-            <button class="btn" style="background: var(--gray-200);" onclick="cancelTeamEdit()">Abbrechen</button>
-        </div>
-    </div>
-</div>
-
-<a href="index.html" class="admin-link">→ Zum Ranking</a>
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -942,7 +999,6 @@
 
 <script>
     // ========== KONFIGURATION ==========
-    const PASSWORD_CHECK_ENABLED = false;
     const ADMIN_PASSWORD = "UsvHallenturnier57";
 
     const firebaseConfig = {
@@ -964,9 +1020,52 @@
     let selectedItem = null;
     let selectedTeamId = null;
     let quantity = 1;
-    let pendingTab = null;
-    let isAuthenticated = false;
     let expandedTeams = new Set();
+
+    // ========== LOGIN ==========
+    function checkAuth() {
+        const isAuthenticated = sessionStorage.getItem('bonierung_auth') === 'true';
+        if (isAuthenticated) {
+            showApp();
+        } else {
+            showLogin();
+        }
+    }
+
+    function showLogin() {
+        document.getElementById('login-screen').classList.remove('hidden');
+        document.getElementById('app-content').classList.remove('visible');
+        document.getElementById('login-password').focus();
+    }
+
+    function showApp() {
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('app-content').classList.add('visible');
+        init();
+    }
+
+    function handleLogin() {
+        const password = document.getElementById('login-password').value;
+        const errorEl = document.getElementById('login-error');
+
+        if (password === ADMIN_PASSWORD) {
+            sessionStorage.setItem('bonierung_auth', 'true');
+            errorEl.classList.remove('visible');
+            showApp();
+        } else {
+            errorEl.classList.add('visible');
+            document.getElementById('login-password').value = '';
+            document.getElementById('login-password').focus();
+        }
+    }
+
+    // Enter key to submit
+    document.getElementById('login-password').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleLogin();
+    });
+
+    // Check auth on page load
+    checkAuth();
 
     // ========== TOAST ==========
     function showToast(title, message, duration = 5000) {
@@ -988,19 +1087,9 @@
     }
 
     // ========== TABS ==========
-    const protectedTabs = ['teams', 'items'];
-
     document.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', () => {
             const tabId = tab.dataset.tab;
-
-            if (PASSWORD_CHECK_ENABLED && protectedTabs.includes(tabId) && !isAuthenticated) {
-                pendingTab = tabId;
-                document.getElementById('password-modal').classList.add('active');
-                document.getElementById('password-input').focus();
-                return;
-            }
-
             switchTab(tabId);
         });
     });
@@ -1011,32 +1100,6 @@
         document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
         document.getElementById(tabId).classList.add('active');
     }
-
-    function checkPassword() {
-        const input = document.getElementById('password-input');
-        if (input.value === ADMIN_PASSWORD) {
-            isAuthenticated = true;
-            document.getElementById('password-modal').classList.remove('active');
-            input.value = '';
-            if (pendingTab) {
-                switchTab(pendingTab);
-                pendingTab = null;
-            }
-        } else {
-            alert('Falsches Passwort!');
-            input.value = '';
-        }
-    }
-
-    function cancelPassword() {
-        document.getElementById('password-modal').classList.remove('active');
-        document.getElementById('password-input').value = '';
-        pendingTab = null;
-    }
-
-    document.getElementById('password-input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') checkPassword();
-    });
 
     // ========== TEAMS ==========
     async function loadTeams() {
@@ -1291,13 +1354,11 @@
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        // Show toast
         showToast(
             'Erfolgreich boniert!',
             `${quantity}× ${selectedItem.name} für ${team ? team.name : 'Team'} (${(selectedItem.price * quantity).toFixed(2)} €)`
         );
 
-        // Reset
         selectedItem = null;
         quantity = 1;
         document.getElementById('selected-item-section').style.display = 'none';
@@ -1445,7 +1506,6 @@
 
         const data = doc.data();
 
-        // Calculate remaining time
         let remainingSeconds;
         if (data.pausedRemaining !== undefined && data.pausedRemaining !== null) {
             remainingSeconds = data.pausedRemaining;
@@ -1458,7 +1518,6 @@
             return;
         }
 
-        // Set startedAt to now, and store how many seconds were remaining when we started
         await db.collection('settings').doc('timer').update({
             isRunning: true,
             startedAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -1480,7 +1539,6 @@
 
         const data = doc.data();
 
-        // Calculate how much time has passed since started
         const startedAt = data.startedAt?.toDate();
         const secondsWhenStarted = data.secondsWhenStarted || data.initialSeconds;
 
@@ -1514,7 +1572,6 @@
         showToast('Timer zurückgesetzt', 'Timer wurde auf 0 gesetzt.');
     }
 
-    // Subscribe to timer updates
     function subscribeToTimer() {
         db.collection('settings').doc('timer').onSnapshot((doc) => {
             if (!doc.exists) {
@@ -1553,8 +1610,6 @@
         await loadConsumptions();
         subscribeToTimer();
     }
-
-    init();
 </script>
 </body>
 </html>
