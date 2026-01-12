@@ -18,6 +18,7 @@
             --gray-800: #1f2937;
             --success: #10b981;
             --danger: #ef4444;
+            --warning: #f59e0b;
         }
 
         * {
@@ -182,10 +183,21 @@
             font-size: 0.875rem;
         }
 
+        .btn-warning {
+            background: var(--warning);
+            color: white;
+        }
+
         .btn-sm {
             padding: 0.5rem 1rem;
             font-size: 0.875rem;
             width: auto;
+        }
+
+        .btn-icon {
+            padding: 0.5rem;
+            width: auto;
+            min-width: 36px;
         }
 
         .list-item {
@@ -211,6 +223,11 @@
             font-size: 0.8rem;
             color: var(--gray-600);
             margin-top: 0.25rem;
+        }
+
+        .list-item-actions {
+            display: flex;
+            gap: 0.5rem;
         }
 
         .consumption-item {
@@ -498,6 +515,124 @@
             font-style: italic;
         }
 
+        /* Toast Styles */
+        .toast-container {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .toast {
+            background: var(--success);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: slideIn 0.3s ease, fadeOut 0.3s ease 4.7s forwards;
+            max-width: 350px;
+        }
+
+        .toast-icon {
+            font-size: 1.5rem;
+        }
+
+        .toast-content {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-weight: 600;
+            margin-bottom: 0.125rem;
+        }
+
+        .toast-message {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+            }
+            to {
+                opacity: 0;
+            }
+        }
+
+        /* Timer Styles */
+        .timer-card {
+            background: linear-gradient(135deg, var(--warning) 0%, #d97706 100%);
+            color: white;
+        }
+
+        .timer-card .card-title {
+            color: white;
+            border-bottom-color: rgba(255,255,255,0.3);
+        }
+
+        .timer-display {
+            font-size: 3rem;
+            font-weight: 700;
+            text-align: center;
+            margin: 1rem 0;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .timer-inputs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .timer-inputs input {
+            text-align: center;
+            background: rgba(255,255,255,0.2);
+            border-color: rgba(255,255,255,0.3);
+            color: white;
+        }
+
+        .timer-inputs input::placeholder {
+            color: rgba(255,255,255,0.6);
+        }
+
+        .timer-inputs label {
+            color: rgba(255,255,255,0.9);
+        }
+
+        .timer-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .timer-buttons .btn {
+            flex: 1;
+        }
+
+        .timer-status {
+            text-align: center;
+            margin-top: 0.75rem;
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
         .modal-overlay {
             display: none;
             position: fixed;
@@ -574,6 +709,15 @@
                 flex: 1;
                 min-width: 100px;
             }
+
+            .toast-container {
+                left: 1rem;
+                right: 1rem;
+            }
+
+            .toast {
+                max-width: 100%;
+            }
         }
 
         @media (max-width: 480px) {
@@ -598,6 +742,10 @@
             .team-summary-total {
                 font-size: 1.25rem;
             }
+
+            .timer-display {
+                font-size: 2.5rem;
+            }
         }
     </style>
 </head>
@@ -611,6 +759,7 @@
     <button class="tab" data-tab="teams">Teams</button>
     <button class="tab" data-tab="items">Speisen/Getränke</button>
     <button class="tab" data-tab="uebersicht">Übersicht</button>
+    <button class="tab" data-tab="timer">⏱️ Timer</button>
 </div>
 
 <!-- Tab 1: Bonierung -->
@@ -705,6 +854,51 @@
     <div id="team-summaries"></div>
 </div>
 
+<!-- Tab 5: Timer -->
+<div id="timer" class="tab-content">
+    <div class="card timer-card">
+        <h2 class="card-title">⏱️ Countdown Timer</h2>
+        <div class="timer-display" id="timer-display">00:00:00</div>
+        <div class="timer-inputs">
+            <div class="form-group" style="flex: 1;">
+                <label>Stunden</label>
+                <input type="number" id="timer-hours" min="0" max="23" value="0" placeholder="HH">
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <label>Minuten</label>
+                <input type="number" id="timer-minutes" min="0" max="59" value="10" placeholder="MM">
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <label>Sekunden</label>
+                <input type="number" id="timer-seconds" min="0" max="59" value="0" placeholder="SS">
+            </div>
+        </div>
+        <div class="timer-buttons">
+            <button class="btn btn-success" onclick="setTimer()">⏱️ Setzen</button>
+            <button class="btn btn-primary" onclick="startTimer()" id="start-btn">▶️ Start</button>
+            <button class="btn btn-danger" onclick="stopTimer()">⏹️ Stop</button>
+        </div>
+        <div class="timer-buttons" style="margin-top: 0.5rem;">
+            <button class="btn btn-warning" onclick="resetTimer()">🔄 Reset</button>
+        </div>
+        <div class="timer-status" id="timer-status">Timer nicht aktiv</div>
+    </div>
+
+    <div class="card">
+        <h2 class="card-title">ℹ️ Hinweise</h2>
+        <ul style="padding-left: 1.25rem; color: var(--gray-600);">
+            <li style="margin-bottom: 0.5rem;">Zeit eingeben und <strong>"Setzen"</strong> klicken um den Timer zu konfigurieren</li>
+            <li style="margin-bottom: 0.5rem;"><strong>"Start"</strong> startet den Countdown</li>
+            <li style="margin-bottom: 0.5rem;"><strong>"Stop"</strong> pausiert den Timer (Zeit bleibt erhalten)</li>
+            <li style="margin-bottom: 0.5rem;"><strong>"Reset"</strong> setzt den Timer auf 0 zurück</li>
+            <li>Der Timer wird automatisch auf der Ranking-Seite angezeigt</li>
+        </ul>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container"></div>
+
 <!-- Password Modal -->
 <div id="password-modal" class="modal-overlay">
     <div class="modal">
@@ -720,6 +914,26 @@
     </div>
 </div>
 
+<!-- Edit Team Modal -->
+<div id="edit-team-modal" class="modal-overlay">
+    <div class="modal">
+        <h3 class="modal-title">✏️ Team bearbeiten</h3>
+        <div class="form-group">
+            <label>Teamname</label>
+            <input type="text" id="edit-team-name" readonly style="background: var(--gray-100);">
+        </div>
+        <div class="form-group">
+            <label>Personenanzahl</label>
+            <input type="number" id="edit-team-persons" min="1">
+        </div>
+        <input type="hidden" id="edit-team-id">
+        <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-primary" onclick="saveTeamEdit()">Speichern</button>
+            <button class="btn" style="background: var(--gray-200);" onclick="cancelTeamEdit()">Abbrechen</button>
+        </div>
+    </div>
+</div>
+
 <a href="index.html" class="admin-link">→ Zum Ranking</a>
 
 <!-- Firebase SDK -->
@@ -728,10 +942,9 @@
 
 <script>
     // ========== KONFIGURATION ==========
-    const PASSWORD_CHECK_ENABLED = false; // Auf false setzen um Passwortschutz zu deaktivieren
-    const ADMIN_PASSWORD = "UsvHallenturnier57";   // Admin-Passwort
+    const PASSWORD_CHECK_ENABLED = false;
+    const ADMIN_PASSWORD = "UsvHallenturnier57";
 
-    // Firebase Konfiguration - HIER EIGENE DATEN EINTRAGEN!
     const firebaseConfig = {
         apiKey: "AIzaSyDM6Hw2tZun0tLjtSgHg-Z7hqxsuFSHysE",
         authDomain: "usv-hallenturnier.firebaseapp.com",
@@ -741,7 +954,6 @@
         appId: "1:813331756534:web:c3af1965e20107383503d7"
     };
 
-    // Firebase initialisieren
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
@@ -755,6 +967,25 @@
     let pendingTab = null;
     let isAuthenticated = false;
     let expandedTeams = new Set();
+
+    // ========== TOAST ==========
+    function showToast(title, message, duration = 5000) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerHTML = `
+            <span class="toast-icon">✓</span>
+            <div class="toast-content">
+                <div class="toast-title">${title}</div>
+                <div class="toast-message">${message}</div>
+            </div>
+        `;
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            toast.remove();
+        }, duration);
+    }
 
     // ========== TABS ==========
     const protectedTabs = ['teams', 'items'];
@@ -822,14 +1053,17 @@
             return;
         }
         container.innerHTML = teams.map(team => `
-                <div class="list-item">
-                    <div class="list-item-info">
-                        <div class="list-item-name">${team.name}</div>
-                        <div class="list-item-details">${team.persons} Personen</div>
-                    </div>
-                    <button class="btn btn-danger btn-sm" onclick="deleteTeam('${team.id}')">Löschen</button>
+            <div class="list-item">
+                <div class="list-item-info">
+                    <div class="list-item-name">${team.name}</div>
+                    <div class="list-item-details">${team.persons} Personen</div>
                 </div>
-            `).join('');
+                <div class="list-item-actions">
+                    <button class="btn btn-primary btn-sm" onclick="openEditTeam('${team.id}')">✏️</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteTeam('${team.id}')">🗑️</button>
+                </div>
+            </div>
+        `).join('');
     }
 
     function renderTeamSelects() {
@@ -841,12 +1075,12 @@
         }
 
         container.innerHTML = teams.map(t => `
-                <button class="team-list-item ${selectedTeamId === t.id ? 'selected' : ''}"
-                        onclick="selectTeam('${t.id}')">
-                    <div class="team-list-item-name">${t.name}</div>
-                    <div class="team-list-item-persons">${t.persons} Personen</div>
-                </button>
-            `).join('');
+            <button class="team-list-item ${selectedTeamId === t.id ? 'selected' : ''}"
+                    onclick="selectTeam('${t.id}')">
+                <div class="team-list-item-name">${t.name}</div>
+                <div class="team-list-item-persons">${t.persons} Personen</div>
+            </button>
+        `).join('');
     }
 
     function selectTeam(teamId) {
@@ -857,6 +1091,33 @@
     function unselectTeam() {
         selectedTeamId = null;
         renderTeamSelects();
+    }
+
+    function openEditTeam(teamId) {
+        const team = teams.find(t => t.id === teamId);
+        if (!team) return;
+
+        document.getElementById('edit-team-id').value = teamId;
+        document.getElementById('edit-team-name').value = team.name;
+        document.getElementById('edit-team-persons').value = team.persons;
+        document.getElementById('edit-team-modal').classList.add('active');
+    }
+
+    async function saveTeamEdit() {
+        const teamId = document.getElementById('edit-team-id').value;
+        const persons = parseInt(document.getElementById('edit-team-persons').value) || 1;
+
+        await db.collection('teams').doc(teamId).update({
+            persons: persons
+        });
+
+        document.getElementById('edit-team-modal').classList.remove('active');
+        showToast('Team aktualisiert', `Personenanzahl wurde auf ${persons} geändert.`);
+        loadTeams();
+    }
+
+    function cancelTeamEdit() {
+        document.getElementById('edit-team-modal').classList.remove('active');
     }
 
     async function addTeam() {
@@ -876,6 +1137,7 @@
 
         document.getElementById('team-name').value = '';
         document.getElementById('team-persons').value = '11';
+        showToast('Team hinzugefügt', `${name} wurde erfolgreich erstellt.`);
         loadTeams();
     }
 
@@ -911,20 +1173,20 @@
             return;
         }
         container.innerHTML = items.map(item => `
-                <div class="list-item">
-                    <div class="list-item-info">
-                        <div class="list-item-name">${item.name}</div>
-                        <div class="list-item-details">
-                            ${item.price.toFixed(2)} €
-                            <span class="badge ${item.type === 'food' ? 'badge-food' : 'badge-drink'}">
-                                ${item.type === 'food' ? 'Speise' : 'Getränk'}
-                            </span>
-                            ${item.alcoholic ? '<span class="badge badge-alcohol">Alkohol</span>' : ''}
-                        </div>
+            <div class="list-item">
+                <div class="list-item-info">
+                    <div class="list-item-name">${item.name}</div>
+                    <div class="list-item-details">
+                        ${item.price.toFixed(2)} €
+                        <span class="badge ${item.type === 'food' ? 'badge-food' : 'badge-drink'}">
+                            ${item.type === 'food' ? 'Speise' : 'Getränk'}
+                        </span>
+                        ${item.alcoholic ? '<span class="badge badge-alcohol">Alkohol</span>' : ''}
                     </div>
-                    <button class="btn btn-danger btn-sm" onclick="deleteItem('${item.id}')">Löschen</button>
                 </div>
-            `).join('');
+                <button class="btn btn-danger btn-sm" onclick="deleteItem('${item.id}')">🗑</button>
+            </div>
+        `).join('');
     }
 
     function renderItemGrids() {
@@ -934,21 +1196,21 @@
         document.getElementById('drinks-grid').innerHTML = drinks.length === 0
             ? '<p style="color: var(--gray-600); grid-column: 1/-1;">Keine Getränke vorhanden</p>'
             : drinks.map(item => `
-                    <button class="item-btn" data-id="${item.id}" onclick="selectItem('${item.id}')">
-                        <div class="item-btn-name">${item.name}</div>
-                        <div class="item-btn-price">${item.price.toFixed(2)} €</div>
-                        ${item.alcoholic ? '<small style="color: #92400e;">🍺</small>' : ''}
-                    </button>
-                `).join('');
+                <button class="item-btn" data-id="${item.id}" onclick="selectItem('${item.id}')">
+                    <div class="item-btn-name">${item.name}</div>
+                    <div class="item-btn-price">${item.price.toFixed(2)} €</div>
+                    ${item.alcoholic ? '<small style="color: #92400e;">🍺</small>' : ''}
+                </button>
+            `).join('');
 
         document.getElementById('food-grid').innerHTML = food.length === 0
             ? '<p style="color: var(--gray-600); grid-column: 1/-1;">Keine Speisen vorhanden</p>'
             : food.map(item => `
-                    <button class="item-btn" data-id="${item.id}" onclick="selectItem('${item.id}')">
-                        <div class="item-btn-name">${item.name}</div>
-                        <div class="item-btn-price">${item.price.toFixed(2)} €</div>
-                    </button>
-                `).join('');
+                <button class="item-btn" data-id="${item.id}" onclick="selectItem('${item.id}')">
+                    <div class="item-btn-name">${item.name}</div>
+                    <div class="item-btn-price">${item.price.toFixed(2)} €</div>
+                </button>
+            `).join('');
     }
 
     async function addItem() {
@@ -974,6 +1236,7 @@
         document.getElementById('item-price').value = '3.50';
         document.getElementById('item-type').value = 'drink';
         document.getElementById('item-alcoholic').checked = false;
+        showToast('Item hinzugefügt', `${name} wurde erfolgreich erstellt.`);
         loadItems();
     }
 
@@ -1014,6 +1277,8 @@
             return;
         }
 
+        const team = teams.find(t => t.id === selectedTeamId);
+
         await db.collection('consumptions').add({
             teamId: selectedTeamId,
             itemId: selectedItem.id,
@@ -1026,7 +1291,13 @@
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        // Reset (Team-Auswahl bleibt erhalten für schnelles Bonieren)
+        // Show toast
+        showToast(
+            'Erfolgreich boniert!',
+            `${quantity}× ${selectedItem.name} für ${team ? team.name : 'Team'} (${(selectedItem.price * quantity).toFixed(2)} €)`
+        );
+
+        // Reset
         selectedItem = null;
         quantity = 1;
         document.getElementById('selected-item-section').style.display = 'none';
@@ -1090,37 +1361,189 @@
             const consumptionCount = s.teamConsumptions.length;
 
             return `
-                    <div class="team-summary ${isExpanded ? 'expanded' : ''}">
-                        <div class="team-summary-header" onclick="toggleTeam('${s.team.id}')">
-                            <div class="team-summary-left">
-                                <span class="team-summary-toggle">▶</span>
-                                <span class="team-summary-name">${s.team.name}</span>
-                                <span class="team-summary-count">${consumptionCount} Bestellung${consumptionCount !== 1 ? 'en' : ''}</span>
-                            </div>
-                            <div class="team-summary-total">${s.total.toFixed(2)} €</div>
+                <div class="team-summary ${isExpanded ? 'expanded' : ''}">
+                    <div class="team-summary-header" onclick="toggleTeam('${s.team.id}')">
+                        <div class="team-summary-left">
+                            <span class="team-summary-toggle">▶</span>
+                            <span class="team-summary-name">${s.team.name}</span>
+                            <span class="team-summary-count">${consumptionCount} Bestellung${consumptionCount !== 1 ? 'en' : ''}</span>
                         </div>
-                        <div class="team-summary-items">
-                            <div class="team-summary-items-inner">
-                                ${s.teamConsumptions.length === 0
+                        <div class="team-summary-total">${s.total.toFixed(2)} €</div>
+                    </div>
+                    <div class="team-summary-items">
+                        <div class="team-summary-items-inner">
+                            ${s.teamConsumptions.length === 0
                 ? '<div class="team-summary-empty">Noch keine Bestellungen</div>'
                 : s.teamConsumptions.map(data => `
-                                        <div class="consumption-item">
-                                            <div class="consumption-item-info">
-                                                <div class="consumption-item-name">${data.quantity}× ${data.itemName}</div>
-                                                <div class="consumption-item-details">${data.total.toFixed(2)} €</div>
-                                            </div>
-                                            <div class="consumption-item-time">
-                                                <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteConsumption('${data.id}')">Löschen</button>
-                                                <div>${renderFirebaseTimestamp(data.createdAt)}</div>
-                                            </div>
+                                    <div class="consumption-item">
+                                        <div class="consumption-item-info">
+                                            <div class="consumption-item-name">${data.quantity}× ${data.itemName}</div>
+                                            <div class="consumption-item-details">${data.total.toFixed(2)} €</div>
                                         </div>
-                                    `).join('')
+                                        <div class="consumption-item-time">
+                                            <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteConsumption('${data.id}')">🗑</button>
+                                            <div>${renderFirebaseTimestamp(data.createdAt)}</div>
+                                        </div>
+                                    </div>
+                                `).join('')
             }
-                            </div>
                         </div>
                     </div>
-                `;
+                </div>
+            `;
         }).join('');
+    }
+
+    // ========== TIMER ==========
+    function formatTime(totalSeconds) {
+        if (totalSeconds < 0) totalSeconds = 0;
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = Math.floor(totalSeconds % 60);
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    function updateTimerDisplay(seconds) {
+        document.getElementById('timer-display').textContent = formatTime(seconds);
+    }
+
+    function updateTimerStatus(text) {
+        document.getElementById('timer-status').textContent = text;
+    }
+
+    async function setTimer() {
+        const hours = parseInt(document.getElementById('timer-hours').value) || 0;
+        const minutes = parseInt(document.getElementById('timer-minutes').value) || 0;
+        const seconds = parseInt(document.getElementById('timer-seconds').value) || 0;
+        const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+
+        if (totalSeconds <= 0) {
+            alert('Bitte eine gültige Zeit eingeben!');
+            return;
+        }
+
+        await db.collection('settings').doc('timer').set({
+            initialSeconds: totalSeconds,
+            startedAt: null,
+            isRunning: false,
+            pausedAt: null,
+            pausedRemaining: totalSeconds
+        });
+
+        updateTimerDisplay(totalSeconds);
+        updateTimerStatus('⏱️ Timer gesetzt - bereit zum Starten');
+        showToast('Timer gesetzt', `Timer auf ${formatTime(totalSeconds)} gesetzt.`);
+    }
+
+    async function startTimer() {
+        const doc = await db.collection('settings').doc('timer').get();
+
+        if (!doc.exists) {
+            alert('Bitte zuerst eine Zeit setzen!');
+            return;
+        }
+
+        const data = doc.data();
+
+        // Calculate remaining time
+        let remainingSeconds;
+        if (data.pausedRemaining !== undefined && data.pausedRemaining !== null) {
+            remainingSeconds = data.pausedRemaining;
+        } else {
+            remainingSeconds = data.initialSeconds;
+        }
+
+        if (remainingSeconds <= 0) {
+            alert('Timer ist bereits abgelaufen! Bitte neu setzen.');
+            return;
+        }
+
+        // Set startedAt to now, and store how many seconds were remaining when we started
+        await db.collection('settings').doc('timer').update({
+            isRunning: true,
+            startedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            secondsWhenStarted: remainingSeconds,
+            pausedRemaining: null
+        });
+
+        updateTimerStatus('▶️ Timer läuft...');
+        showToast('Timer gestartet', 'Der Countdown läuft jetzt.');
+    }
+
+    async function stopTimer() {
+        const doc = await db.collection('settings').doc('timer').get();
+
+        if (!doc.exists || !doc.data().isRunning) {
+            updateTimerStatus('⏸️ Timer ist nicht aktiv');
+            return;
+        }
+
+        const data = doc.data();
+
+        // Calculate how much time has passed since started
+        const startedAt = data.startedAt?.toDate();
+        const secondsWhenStarted = data.secondsWhenStarted || data.initialSeconds;
+
+        let remaining = secondsWhenStarted;
+        if (startedAt) {
+            const elapsed = Math.floor((Date.now() - startedAt.getTime()) / 1000);
+            remaining = Math.max(0, secondsWhenStarted - elapsed);
+        }
+
+        await db.collection('settings').doc('timer').update({
+            isRunning: false,
+            pausedRemaining: remaining,
+            startedAt: null
+        });
+
+        updateTimerDisplay(remaining);
+        updateTimerStatus('⏸️ Timer pausiert');
+        showToast('Timer gestoppt', `Verbleibende Zeit: ${formatTime(remaining)}`);
+    }
+
+    async function resetTimer() {
+        await db.collection('settings').doc('timer').set({
+            initialSeconds: 0,
+            startedAt: null,
+            isRunning: false,
+            pausedRemaining: 0
+        });
+
+        updateTimerDisplay(0);
+        updateTimerStatus('🔄 Timer zurückgesetzt');
+        showToast('Timer zurückgesetzt', 'Timer wurde auf 0 gesetzt.');
+    }
+
+    // Subscribe to timer updates
+    function subscribeToTimer() {
+        db.collection('settings').doc('timer').onSnapshot((doc) => {
+            if (!doc.exists) {
+                updateTimerDisplay(0);
+                updateTimerStatus('Timer nicht aktiv');
+                return;
+            }
+
+            const data = doc.data();
+
+            if (data.isRunning && data.startedAt) {
+                const startedAt = data.startedAt.toDate();
+                const secondsWhenStarted = data.secondsWhenStarted || data.initialSeconds;
+                const elapsed = Math.floor((Date.now() - startedAt.getTime()) / 1000);
+                const remaining = Math.max(0, secondsWhenStarted - elapsed);
+
+                updateTimerDisplay(remaining);
+                updateTimerStatus(remaining > 0 ? '▶️ Timer läuft...' : '⏰ Zeit abgelaufen!');
+            } else if (data.pausedRemaining !== undefined && data.pausedRemaining !== null) {
+                updateTimerDisplay(data.pausedRemaining);
+                updateTimerStatus(data.pausedRemaining > 0 ? '⏸️ Timer pausiert' : '⏰ Zeit abgelaufen!');
+            } else if (data.initialSeconds) {
+                updateTimerDisplay(data.initialSeconds);
+                updateTimerStatus('⏱️ Timer gesetzt - bereit zum Starten');
+            } else {
+                updateTimerDisplay(0);
+                updateTimerStatus('Timer nicht aktiv');
+            }
+        });
     }
 
     // ========== INIT ==========
@@ -1128,6 +1551,7 @@
         await loadTeams();
         await loadItems();
         await loadConsumptions();
+        subscribeToTimer();
     }
 
     init();
