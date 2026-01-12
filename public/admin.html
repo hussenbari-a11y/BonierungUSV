@@ -213,6 +213,38 @@
             margin-top: 0.25rem;
         }
 
+        .consumption-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            /*background: var(--gray-100);*/
+            border-radius: 0;
+            margin-bottom: 0.5rem;
+        }
+
+        .consumption-item-info {
+            flex: 1;
+        }
+
+        .consumption-item-name {
+            font-weight: 500;
+            color: white;
+        }
+
+        .consumption-item-details {
+            font-size: 0.8rem;
+            color: var(--gray-200);
+            margin-top: 0.25rem;
+        }
+
+        .consumption-item-time {
+            font-size: 0.8rem;
+            color: var(--gray-200);
+            margin-top: 0.25rem;
+            text-align: right;
+        }
+
         .badge {
             display: inline-block;
             padding: 0.25rem 0.5rem;
@@ -901,11 +933,14 @@
                             ? '<em>Noch keine Bestellungen</em>'
                             : s.teamConsumptions.map(data => `
                                 <div class="consumption-item">
-                                    <span>${renderFirebaseTimestamp(data.createdAt)}</span>
-                                    <span>${data.quantity}× ${data.itemName}</span>
-                                    <span>${data.total.toFixed(2)} €
-                                    <button class="btn btn-danger btn-sm" onclick="deleteConsumption('${data.id}')">Löschen</button>
-                                    </span>
+                                    <div class="consumption-item-info">
+                                        <div class="consumption-item-name">${data.quantity}× ${data.itemName}</div>
+                                        <div class="consumption-item-details">${data.total.toFixed(2)} €</div>
+                                    </div>
+                                    <div class="consumption-item-time">
+                                        <button class="btn btn-danger btn-sm" onclick="deleteConsumption('${data.id}')">Löschen</button>
+                                        <div class="consumption-item-time">${renderFirebaseTimestamp(data.createdAt)}</div>
+                                    </div>
                                 </div>
                             `).join('')
                         }
