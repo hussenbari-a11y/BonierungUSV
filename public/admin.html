@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bonierung - Admin</title>
+    <style>
+        :root {
+            --primary: #7c3aed;
+            --primary-dark: #6d28d9;
+            --primary-light: #a78bfa;
+            --primary-bg: #f5f3ff;
+            --white: #ffffff;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-600: #4b5563;
+            --gray-800: #1f2937;
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--primary-bg);
+            min-height: 100vh;
+            color: var(--gray-800);
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(124, 58, 237, 0.3);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .tabs {
+            display: flex;
+            background: var(--white);
+            border-bottom: 2px solid var(--primary-light);
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .tab {
+            flex: 1;
+            min-width: max-content;
+            padding: 1rem 0.75rem;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--gray-600);
+            transition: all 0.2s;
+            border-bottom: 3px solid transparent;
+            white-space: nowrap;
+        }
+
+        .tab:hover {
+            background: var(--primary-bg);
+            color: var(--primary);
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            background: var(--primary-bg);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 1rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--primary-dark);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--primary-light);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--gray-600);
+            margin-bottom: 0.375rem;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            accent-color: var(--primary);
+            transform: scale(1.2);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            width: auto;
+        }
+
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: var(--gray-100);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+
+        .list-item-info {
+            flex: 1;
+        }
+
+        .list-item-name {
+            font-weight: 500;
+            color: var(--gray-800);
+        }
+
+        .list-item-details {
+            font-size: 0.8rem;
+            color: var(--gray-600);
+            margin-top: 0.25rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-alcohol {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-food {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-drink {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .item-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .item-btn {
+            padding: 1rem;
+            background: var(--white);
+            border: 2px solid var(--gray-200);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .item-btn:hover {
+            border-color: var(--primary);
+            background: var(--primary-bg);
+        }
+
+        .item-btn.selected {
+            border-color: var(--primary);
+            background: var(--primary-bg);
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
+        }
+
+        .item-btn-name {
+            font-weight: 500;
+            color: var(--gray-800);
+            font-size: 0.9rem;
+        }
+
+        .item-btn-price {
+            color: var(--primary);
+            font-weight: 600;
+            margin-top: 0.25rem;
+        }
+
+        .quantity-control {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .quantity-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 2px solid var(--primary);
+            background: var(--white);
+            color: var(--primary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .quantity-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .quantity-display {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--primary);
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .section-divider {
+            display: flex;
+            align-items: center;
+            margin: 1.5rem 0;
+            color: var(--gray-600);
+            font-weight: 500;
+        }
+
+        .section-divider::before,
+        .section-divider::after {
+            content: '';
+            flex: 1;
+            height: 2px;
+            background: var(--gray-200);
+        }
+
+        .section-divider span {
+            padding: 0 1rem;
+        }
+
+        .team-summary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .team-summary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .team-summary-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .team-summary-total {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .team-summary-items {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        .consumption-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .consumption-item:last-child {
+            border-bottom: none;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--primary-dark);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: var(--gray-600);
+        }
+
+        .admin-link {
+            display: block;
+            text-align: center;
+            margin-top: 1.5rem;
+            color: var(--primary-dark);
+            text-decoration: none;
+            font-size: 0.875rem;
+        }
+
+        .admin-link:hover {
+            color: var(--primary-dark);
+            text-decoration: underline;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 480px) {
+            .tabs {
+                justify-content: flex-start;
+            }
+            
+            .tab {
+                padding: 0.875rem 0.5rem;
+                font-size: 0.8rem;
+            }
+
+            .item-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🍺 Bonierung Admin</h1>
+    </div>
+
+    <div class="tabs">
+        <button class="tab active" data-tab="bonierung">Bonierung</button>
+        <button class="tab" data-tab="teams">Teams</button>
+        <button class="tab" data-tab="items">Speisen/Getränke</button>
+        <button class="tab" data-tab="uebersicht">Übersicht</button>
+    </div>
+
+    <!-- Tab 1: Bonierung -->
+    <div id="bonierung" class="tab-content active">
+        <div class="card">
+            <h2 class="card-title">Team auswählen</h2>
+            <div class="form-group">
+                <select id="bonierung-team">
+                    <option value="">-- Team wählen --</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 class="card-title">🍺 Getränke</h2>
+            <div id="drinks-grid" class="item-grid"></div>
+        </div>
+
+        <div class="card">
+            <h2 class="card-title">🍽️ Speisen</h2>
+            <div id="food-grid" class="item-grid"></div>
+        </div>
+
+        <div id="selected-item-section" class="card" style="display: none;">
+            <h2 class="card-title">Ausgewählt: <span id="selected-item-name"></span></h2>
+            <div class="quantity-control">
+                <button class="quantity-btn" onclick="changeQuantity(-1)">−</button>
+                <div class="quantity-display" id="quantity">1</div>
+                <button class="quantity-btn" onclick="changeQuantity(1)">+</button>
+            </div>
+            <button class="btn btn-success" onclick="addConsumption()">✓ Bonieren</button>
+        </div>
+    </div>
+
+    <!-- Tab 2: Teams -->
+    <div id="teams" class="tab-content">
+        <div class="card">
+            <h2 class="card-title">Neues Team hinzufügen</h2>
+            <div class="form-group">
+                <label>Teamname</label>
+                <input type="text" id="team-name" placeholder="z.B. USV">
+            </div>
+            <div class="form-group">
+                <label>Personenanzahl</label>
+                <input type="number" id="team-persons" min="1" value="11">
+            </div>
+            <button class="btn btn-primary" onclick="addTeam()">Team hinzufügen</button>
+        </div>
+
+        <div class="card">
+            <h2 class="card-title">Alle Teams</h2>
+            <div id="teams-list"></div>
+        </div>
+    </div>
+
+    <!-- Tab 3: Items -->
+    <div id="items" class="tab-content">
+        <div class="card">
+            <h2 class="card-title">Neue Speise/Getränk hinzufügen</h2>
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="item-name" placeholder="z.B. Bier 0.5l">
+            </div>
+            <div class="form-group">
+                <label>Preis (€)</label>
+                <input type="number" id="item-price" min="0" step="0.10" value="3.50">
+            </div>
+            <div class="form-group">
+                <label>Typ</label>
+                <select id="item-type">
+                    <option value="drink">Getränk</option>
+                    <option value="food">Speise</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="item-alcoholic">
+                    <label for="item-alcoholic" style="margin: 0;">Alkoholisch</label>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="addItem()">Hinzufügen</button>
+        </div>
+
+        <div class="card">
+            <h2 class="card-title">Alle Speisen & Getränke</h2>
+            <div id="items-list"></div>
+        </div>
+    </div>
+
+    <!-- Tab 4: Übersicht -->
+    <div id="uebersicht" class="tab-content">
+        <div id="team-summaries"></div>
+    </div>
+
+    <!-- Password Modal -->
+    <div id="password-modal" class="modal-overlay">
+        <div class="modal">
+            <h3 class="modal-title">🔒 Admin-Bereich</h3>
+            <p style="margin-bottom: 1rem; color: var(--gray-600);">Bitte Passwort eingeben:</p>
+            <div class="form-group">
+                <input type="password" id="password-input" placeholder="Passwort">
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button class="btn btn-primary" onclick="checkPassword()">Bestätigen</button>
+                <button class="btn" style="background: var(--gray-200);" onclick="cancelPassword()">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
+    <a href="index.html" class="admin-link">→ Zum Ranking</a>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // ========== KONFIGURATION ==========
+        const PASSWORD_CHECK_ENABLED = false; // Auf false setzen um Passwortschutz zu deaktivieren
+        const ADMIN_PASSWORD = "UsvHallenturnier57";   // Admin-Passwort
+
+        // Firebase Konfiguration - HIER EIGENE DATEN EINTRAGEN!
+        const firebaseConfig = {
+            apiKey: "AIzaSyDM6Hw2tZun0tLjtSgHg-Z7hqxsuFSHysE",
+            authDomain: "usv-hallenturnier.firebaseapp.com",
+            projectId: "usv-hallenturnier",
+            storageBucket: "usv-hallenturnier.firebasestorage.app",
+            messagingSenderId: "813331756534",
+            appId: "1:813331756534:web:c3af1965e20107383503d7"
+        };
+
+        // Firebase initialisieren
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // ========== STATE ==========
+        let teams = [];
+        let items = [];
+        let consumptions = [];
+        let selectedItem = null;
+        let quantity = 1;
+        let pendingTab = null;
+        let isAuthenticated = false;
+
+        // ========== TABS ==========
+        const protectedTabs = ['teams', 'items'];
+
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabId = tab.dataset.tab;
+                
+                if (PASSWORD_CHECK_ENABLED && protectedTabs.includes(tabId) && !isAuthenticated) {
+                    pendingTab = tabId;
+                    document.getElementById('password-modal').classList.add('active');
+                    document.getElementById('password-input').focus();
+                    return;
+                }
+
+                switchTab(tabId);
+            });
+        });
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        function checkPassword() {
+            const input = document.getElementById('password-input');
+            if (input.value === ADMIN_PASSWORD) {
+                isAuthenticated = true;
+                document.getElementById('password-modal').classList.remove('active');
+                input.value = '';
+                if (pendingTab) {
+                    switchTab(pendingTab);
+                    pendingTab = null;
+                }
+            } else {
+                alert('Falsches Passwort!');
+                input.value = '';
+            }
+        }
+
+        function cancelPassword() {
+            document.getElementById('password-modal').classList.remove('active');
+            document.getElementById('password-input').value = '';
+            pendingTab = null;
+        }
+
+        document.getElementById('password-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') checkPassword();
+        });
+
+        // ========== TEAMS ==========
+        async function loadTeams() {
+            const snapshot = await db.collection('teams').orderBy('name').get();
+            teams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderTeams();
+            renderTeamSelects();
+        }
+
+        function renderTeams() {
+            const container = document.getElementById('teams-list');
+            if (teams.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">👥</div>Noch keine Teams vorhanden</div>';
+                return;
+            }
+            container.innerHTML = teams.map(team => `
+                <div class="list-item">
+                    <div class="list-item-info">
+                        <div class="list-item-name">${team.name}</div>
+                        <div class="list-item-details">${team.persons} Personen</div>
+                    </div>
+                    <button class="btn btn-danger btn-sm" onclick="deleteTeam('${team.id}')">Löschen</button>
+                </div>
+            `).join('');
+        }
+
+        function renderTeamSelects() {
+            const select = document.getElementById('bonierung-team');
+            select.innerHTML = '<option value="">-- Team wählen --</option>' +
+                teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+        }
+
+        async function addTeam() {
+            const name = document.getElementById('team-name').value.trim();
+            const persons = parseInt(document.getElementById('team-persons').value) || 1;
+
+            if (!name) {
+                alert('Bitte Teamnamen eingeben!');
+                return;
+            }
+
+            await db.collection('teams').add({
+                name,
+                persons,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            document.getElementById('team-name').value = '';
+            document.getElementById('team-persons').value = '11';
+            loadTeams();
+        }
+
+        async function deleteTeam(id) {
+            if (confirm('Team wirklich löschen? Alle Bonierungen für dieses Team werden ebenfalls gelöscht!')) {
+                // Lösche alle Konsumierungen für dieses Team
+                const consumptionSnapshot = await db.collection('consumptions').where('teamId', '==', id).get();
+                const batch = db.batch();
+                consumptionSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+                batch.delete(db.collection('teams').doc(id));
+                await batch.commit();
+                loadTeams();
+                loadConsumptions();
+            }
+        }
+
+        // ========== ITEMS ==========
+        async function loadItems() {
+            const snapshot = await db.collection('items').orderBy('name').get();
+            items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderItems();
+            renderItemGrids();
+        }
+
+        function renderItems() {
+            const container = document.getElementById('items-list');
+            if (items.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🍽️</div>Noch keine Speisen/Getränke vorhanden</div>';
+                return;
+            }
+            container.innerHTML = items.map(item => `
+                <div class="list-item">
+                    <div class="list-item-info">
+                        <div class="list-item-name">${item.name}</div>
+                        <div class="list-item-details">
+                            ${item.price.toFixed(2)} € 
+                            <span class="badge ${item.type === 'food' ? 'badge-food' : 'badge-drink'}">
+                                ${item.type === 'food' ? 'Speise' : 'Getränk'}
+                            </span>
+                            ${item.alcoholic ? '<span class="badge badge-alcohol">Alkohol</span>' : ''}
+                        </div>
+                    </div>
+                    <button class="btn btn-danger btn-sm" onclick="deleteItem('${item.id}')">Löschen</button>
+                </div>
+            `).join('');
+        }
+
+        function renderItemGrids() {
+            const drinks = items.filter(i => i.type === 'drink');
+            const food = items.filter(i => i.type === 'food');
+
+            document.getElementById('drinks-grid').innerHTML = drinks.length === 0 
+                ? '<p style="color: var(--gray-600); grid-column: 1/-1;">Keine Getränke vorhanden</p>'
+                : drinks.map(item => `
+                    <button class="item-btn" data-id="${item.id}" onclick="selectItem('${item.id}')">
+                        <div class="item-btn-name">${item.name}</div>
+                        <div class="item-btn-price">${item.price.toFixed(2)} €</div>
+                        ${item.alcoholic ? '<small style="color: #92400e;">🍺</small>' : ''}
+                    </button>
+                `).join('');
+
+            document.getElementById('food-grid').innerHTML = food.length === 0
+                ? '<p style="color: var(--gray-600); grid-column: 1/-1;">Keine Speisen vorhanden</p>'
+                : food.map(item => `
+                    <button class="item-btn" data-id="${item.id}" onclick="selectItem('${item.id}')">
+                        <div class="item-btn-name">${item.name}</div>
+                        <div class="item-btn-price">${item.price.toFixed(2)} €</div>
+                    </button>
+                `).join('');
+        }
+
+        async function addItem() {
+            const name = document.getElementById('item-name').value.trim();
+            const price = parseFloat(document.getElementById('item-price').value) || 0;
+            const type = document.getElementById('item-type').value;
+            const alcoholic = document.getElementById('item-alcoholic').checked;
+
+            if (!name) {
+                alert('Bitte Namen eingeben!');
+                return;
+            }
+
+            await db.collection('items').add({
+                name,
+                price,
+                type,
+                alcoholic,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            document.getElementById('item-name').value = '';
+            document.getElementById('item-price').value = '3.50';
+            document.getElementById('item-type').value = 'drink';
+            document.getElementById('item-alcoholic').checked = false;
+            loadItems();
+        }
+
+        async function deleteItem(id) {
+            if (confirm('Item wirklich löschen?')) {
+                await db.collection('items').doc(id).delete();
+                loadItems();
+            }
+        }
+
+        // ========== BONIERUNG ==========
+        function selectItem(id) {
+            selectedItem = items.find(i => i.id === id);
+            quantity = 1;
+
+            document.querySelectorAll('.item-btn').forEach(btn => {
+                btn.classList.toggle('selected', btn.dataset.id === id);
+            });
+
+            document.getElementById('selected-item-section').style.display = 'block';
+            document.getElementById('selected-item-name').textContent = selectedItem.name;
+            document.getElementById('quantity').textContent = quantity;
+        }
+
+        function changeQuantity(delta) {
+            quantity = Math.max(1, quantity + delta);
+            document.getElementById('quantity').textContent = quantity;
+        }
+
+        async function addConsumption() {
+            const teamId = document.getElementById('bonierung-team').value;
+
+            if (!teamId) {
+                alert('Bitte Team auswählen!');
+                return;
+            }
+
+            if (!selectedItem) {
+                alert('Bitte Speise/Getränk auswählen!');
+                return;
+            }
+
+            await db.collection('consumptions').add({
+                teamId,
+                itemId: selectedItem.id,
+                itemName: selectedItem.name,
+                itemPrice: selectedItem.price,
+                itemType: selectedItem.type,
+                itemAlcoholic: selectedItem.alcoholic,
+                quantity,
+                total: selectedItem.price * quantity,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            // Reset
+            selectedItem = null;
+            quantity = 1;
+            document.getElementById('selected-item-section').style.display = 'none';
+            document.querySelectorAll('.item-btn').forEach(btn => btn.classList.remove('selected'));
+
+            alert('Erfolgreich boniert! ✓');
+            loadConsumptions();
+        }
+
+        // ========== ÜBERSICHT ==========
+        async function loadConsumptions() {
+            const snapshot = await db.collection('consumptions').get();
+            consumptions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderSummaries();
+        }
+
+        async function deleteConsumption(id) {
+            if (confirm('Bonierung wirklich löschen?')) {
+                await db.collection('consumptions').doc(id).delete();
+                loadConsumptions();
+            }
+        }
+
+        function renderFirebaseTimestamp(ts) {
+            const date = ts.toDate();
+            return (date.toLocaleString());
+        }
+
+        function renderSummaries() {
+            const container = document.getElementById('team-summaries');
+
+            if (teams.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📊</div>Noch keine Teams vorhanden</div>';
+                return;
+            }
+
+            const summaries = teams.map(team => {
+                const teamConsumptions = consumptions.filter(c => c.teamId === team.id);
+                const total = teamConsumptions.reduce((sum, c) => sum + c.total, 0);
+
+                return { team, total, teamConsumptions };
+            });
+
+            container.innerHTML = summaries.map(s => `
+                <div class="team-summary">
+                    <div class="team-summary-header">
+                        <div class="team-summary-name">${s.team.name}</div>
+                        <div class="team-summary-total">${s.total.toFixed(2)} €</div>
+                    </div>
+                    <div class="team-summary-items">
+                        ${s.teamConsumptions.length === 0
+                            ? '<em>Noch keine Bestellungen</em>'
+                            : s.teamConsumptions.map(data => `
+                                <div class="consumption-item">
+                                    <span>${renderFirebaseTimestamp(data.createdAt)}</span>
+                                    <span>${data.quantity}× ${data.itemName}</span>
+                                    <span>${data.total.toFixed(2)} €
+                                    <button class="btn btn-danger btn-sm" onclick="deleteConsumption('${data.id}')">Löschen</button>
+                                    </span>
+                                </div>
+                            `).join('')
+                        }
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ========== INIT ==========
+        async function init() {
+            await loadTeams();
+            await loadItems();
+            await loadConsumptions();
+        }
+
+        init();
+    </script>
+</body>
+</html>
