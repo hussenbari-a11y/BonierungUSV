@@ -34,7 +34,6 @@
             color: var(--gray-800);
         }
 
-        /* Hide main content until authenticated */
         .app-content {
             display: none;
         }
@@ -251,6 +250,14 @@
             border-bottom: none;
         }
 
+        .consumption-item.after-timer {
+            opacity: 0.7;
+            background: rgba(239, 68, 68, 0.15);
+            margin: 0 -0.5rem;
+            padding: 0.75rem 0.5rem;
+            border-radius: 6px;
+        }
+
         .consumption-item-info {
             flex: 1;
         }
@@ -294,6 +301,13 @@
         .badge-drink {
             background: #dbeafe;
             color: #1e40af;
+        }
+
+        .badge-after-timer {
+            background: rgba(239, 68, 68, 0.3);
+            color: #fecaca;
+            font-size: 0.65rem;
+            margin-left: 0.5rem;
         }
 
         .item-grid {
@@ -545,6 +559,10 @@
             max-width: 350px;
         }
 
+        .toast.toast-warning {
+            background: var(--warning);
+        }
+
         .toast-icon {
             font-size: 1.5rem;
         }
@@ -628,7 +646,20 @@
             opacity: 0.9;
         }
 
-        /* Login Screen Styles */
+        /* Timer expired warning banner */
+        .timer-expired-banner {
+            background: var(--danger);
+            color: white;
+            padding: 0.75rem 1rem;
+            text-align: center;
+            font-weight: 500;
+            display: none;
+        }
+
+        .timer-expired-banner.visible {
+            display: block;
+        }
+
         .login-screen {
             position: fixed;
             top: 0;
@@ -825,6 +856,11 @@
         <h1>🍺 USV Hallenturnier 2026 🍺</h1>
     </div>
 
+    <!-- Timer expired warning banner -->
+    <div class="timer-expired-banner" id="timer-expired-banner">
+        ⏰ Timer abgelaufen! Neue Bestellungen werden als "nach Timer" markiert.
+    </div>
+
     <div class="tabs">
         <button class="tab active" data-tab="bonierung">Bonierung</button>
         <button class="tab" data-tab="teams">Teams</button>
@@ -962,7 +998,8 @@
                 <li style="margin-bottom: 0.5rem;"><strong>"Start"</strong> startet den Countdown</li>
                 <li style="margin-bottom: 0.5rem;"><strong>"Stop"</strong> pausiert den Timer (Zeit bleibt erhalten)</li>
                 <li style="margin-bottom: 0.5rem;"><strong>"Reset"</strong> setzt den Timer auf 0 zurück</li>
-                <li>Der Timer wird automatisch auf der Ranking-Seite angezeigt</li>
+                <li style="margin-bottom: 0.5rem;">Der Timer wird automatisch auf der Ranking-Seite angezeigt</li>
+                <li><strong>Nach Ablauf</strong> werden neue Bestellungen als "nach Timer" markiert</li>
             </ul>
         </div>
     </div>
@@ -1021,6 +1058,7 @@
     let selectedTeamId = null;
     let quantity = 1;
     let expandedTeams = new Set();
+    let currentTimerExpired = false; // Track current timer state
 
     // ========== LOGIN ==========
     function checkAuth() {
@@ -1059,21 +1097,19 @@
         }
     }
 
-    // Enter key to submit
     document.getElementById('login-password').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') handleLogin();
     });
 
-    // Check auth on page load
     checkAuth();
 
     // ========== TOAST ==========
-    function showToast(title, message, duration = 5000) {
+    function showToast(title, message, duration = 5000, isWarning = false) {
         const container = document.getElementById('toast-container');
         const toast = document.createElement('div');
-        toast.className = 'toast';
+        toast.className = 'toast' + (isWarning ? ' toast-warning' : '');
         toast.innerHTML = `
-            <span class="toast-icon">✓</span>
+            <span class="toast-icon">${isWarning ? '⚠️' : '✓'}</span>
             <div class="toast-content">
                 <div class="toast-title">${title}</div>
                 <div class="toast-message">${message}</div>
@@ -1329,6 +1365,43 @@
         document.getElementById('quantity').textContent = quantity;
     }
 
+    // Check if timer is currently expired
+    async function isTimerExpired() {
+        try {
+            const doc = await db.collection('settings').doc('timer').get();
+
+            if (!doc.exists) {
+                return false; // No timer = not expired
+            }
+
+            const data = doc.data();
+
+            // Timer was never started or reset to 0
+            if (!data.initialSeconds || data.initialSeconds === 0) {
+                return false;
+            }
+
+            // Timer is running - calculate remaining
+            if (data.isRunning && data.startedAt) {
+                const startedAt = data.startedAt.toDate();
+                const secondsWhenStarted = data.secondsWhenStarted || data.initialSeconds;
+                const elapsed = Math.floor((Date.now() - startedAt.getTime()) / 1000);
+                const remaining = secondsWhenStarted - elapsed;
+                return remaining <= 0;
+            }
+
+            // Timer is paused - check pausedRemaining
+            if (data.pausedRemaining !== undefined && data.pausedRemaining !== null) {
+                return data.pausedRemaining <= 0;
+            }
+
+            return false;
+        } catch (error) {
+            console.error('Error checking timer:', error);
+            return false;
+        }
+    }
+
     async function addConsumption() {
         if (!selectedTeamId) {
             alert('Bitte Team auswählen!');
@@ -1342,6 +1415,9 @@
 
         const team = teams.find(t => t.id === selectedTeamId);
 
+        // Check if timer is expired at the moment of booking
+        const afterTimer = await isTimerExpired();
+
         await db.collection('consumptions').add({
             teamId: selectedTeamId,
             itemId: selectedItem.id,
@@ -1351,13 +1427,17 @@
             itemAlcoholic: selectedItem.alcoholic,
             quantity,
             total: selectedItem.price * quantity,
+            afterTimer: afterTimer, // NEW FIELD: true if created after timer expired
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        showToast(
-            'Erfolgreich boniert!',
-            `${quantity}× ${selectedItem.name} für ${team ? team.name : 'Team'} (${(selectedItem.price * quantity).toFixed(2)} €)`
-        );
+        const message = `${quantity}× ${selectedItem.name} für ${team ? team.name : 'Team'} (${(selectedItem.price * quantity).toFixed(2)} €)`;
+
+        if (afterTimer) {
+            showToast('Boniert (nach Timer!)', message, 5000, true);
+        } else {
+            showToast('Erfolgreich boniert!', message);
+        }
 
         selectedItem = null;
         quantity = 1;
@@ -1408,13 +1488,14 @@
         const summaries = teams.map(team => {
             const teamConsumptions = consumptions.filter(c => c.teamId === team.id);
             const total = teamConsumptions.reduce((sum, c) => sum + c.total, 0);
+            const afterTimerCount = teamConsumptions.filter(c => c.afterTimer).length;
 
             teamConsumptions.sort((a, b) => {
                 if (!a.createdAt || !b.createdAt) return 0;
                 return b.createdAt.toDate() - a.createdAt.toDate();
             });
 
-            return { team, total, teamConsumptions };
+            return { team, total, teamConsumptions, afterTimerCount };
         });
 
         container.innerHTML = summaries.map(s => {
@@ -1427,7 +1508,10 @@
                         <div class="team-summary-left">
                             <span class="team-summary-toggle">▶</span>
                             <span class="team-summary-name">${s.team.name}</span>
-                            <span class="team-summary-count">${consumptionCount} Bestellung${consumptionCount !== 1 ? 'en' : ''}</span>
+                            <span class="team-summary-count">
+                                ${consumptionCount} Bestellung${consumptionCount !== 1 ? 'en' : ''}
+                                ${s.afterTimerCount > 0 ? `<span style="color: #fca5a5;"> (${s.afterTimerCount} nach Timer)</span>` : ''}
+                            </span>
                         </div>
                         <div class="team-summary-total">${s.total.toFixed(2)} €</div>
                     </div>
@@ -1436,9 +1520,12 @@
                             ${s.teamConsumptions.length === 0
                 ? '<div class="team-summary-empty">Noch keine Bestellungen</div>'
                 : s.teamConsumptions.map(data => `
-                                    <div class="consumption-item">
+                                    <div class="consumption-item ${data.afterTimer ? 'after-timer' : ''}">
                                         <div class="consumption-item-info">
-                                            <div class="consumption-item-name">${data.quantity}× ${data.itemName}</div>
+                                            <div class="consumption-item-name">
+                                                ${data.quantity}× ${data.itemName}
+                                                ${data.afterTimer ? '<span class="badge badge-after-timer">nach Timer</span>' : ''}
+                                            </div>
                                             <div class="consumption-item-details">${data.total.toFixed(2)} €</div>
                                         </div>
                                         <div class="consumption-item-time">
@@ -1472,6 +1559,16 @@
         document.getElementById('timer-status').textContent = text;
     }
 
+    function updateTimerExpiredBanner(expired) {
+        const banner = document.getElementById('timer-expired-banner');
+        if (expired) {
+            banner.classList.add('visible');
+        } else {
+            banner.classList.remove('visible');
+        }
+        currentTimerExpired = expired;
+    }
+
     async function setTimer() {
         const hours = parseInt(document.getElementById('timer-hours').value) || 0;
         const minutes = parseInt(document.getElementById('timer-minutes').value) || 0;
@@ -1493,6 +1590,7 @@
 
         updateTimerDisplay(totalSeconds);
         updateTimerStatus('⏱️ Timer gesetzt - bereit zum Starten');
+        updateTimerExpiredBanner(false);
         showToast('Timer gesetzt', `Timer auf ${formatTime(totalSeconds)} gesetzt.`);
     }
 
@@ -1526,6 +1624,7 @@
         });
 
         updateTimerStatus('▶️ Timer läuft...');
+        updateTimerExpiredBanner(false);
         showToast('Timer gestartet', 'Der Countdown läuft jetzt.');
     }
 
@@ -1569,6 +1668,7 @@
 
         updateTimerDisplay(0);
         updateTimerStatus('🔄 Timer zurückgesetzt');
+        updateTimerExpiredBanner(false);
         showToast('Timer zurückgesetzt', 'Timer wurde auf 0 gesetzt.');
     }
 
@@ -1577,6 +1677,7 @@
             if (!doc.exists) {
                 updateTimerDisplay(0);
                 updateTimerStatus('Timer nicht aktiv');
+                updateTimerExpiredBanner(false);
                 return;
             }
 
@@ -1589,16 +1690,31 @@
                 const remaining = Math.max(0, secondsWhenStarted - elapsed);
 
                 updateTimerDisplay(remaining);
-                updateTimerStatus(remaining > 0 ? '▶️ Timer läuft...' : '⏰ Zeit abgelaufen!');
+
+                if (remaining > 0) {
+                    updateTimerStatus('▶️ Timer läuft...');
+                    updateTimerExpiredBanner(false);
+                } else {
+                    updateTimerStatus('⏰ Zeit abgelaufen!');
+                    updateTimerExpiredBanner(true);
+                }
             } else if (data.pausedRemaining !== undefined && data.pausedRemaining !== null) {
                 updateTimerDisplay(data.pausedRemaining);
-                updateTimerStatus(data.pausedRemaining > 0 ? '⏸️ Timer pausiert' : '⏰ Zeit abgelaufen!');
+                if (data.pausedRemaining > 0) {
+                    updateTimerStatus('⏸️ Timer pausiert');
+                    updateTimerExpiredBanner(false);
+                } else {
+                    updateTimerStatus('⏰ Zeit abgelaufen!');
+                    updateTimerExpiredBanner(true);
+                }
             } else if (data.initialSeconds) {
                 updateTimerDisplay(data.initialSeconds);
                 updateTimerStatus('⏱️ Timer gesetzt - bereit zum Starten');
+                updateTimerExpiredBanner(false);
             } else {
                 updateTimerDisplay(0);
                 updateTimerStatus('Timer nicht aktiv');
+                updateTimerExpiredBanner(false);
             }
         });
     }

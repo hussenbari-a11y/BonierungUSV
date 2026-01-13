@@ -560,7 +560,7 @@
             // Calculate ranking (only alcoholic drinks!)
             const ranking = teams.map(team => {
                 const teamConsumptions = consumptions.filter(c =>
-                    c.teamId === team.id && c.itemAlcoholic === true
+                    c.teamId === team.id && c.itemAlcoholic === true && c.afterTimer === false
                 );
 
                 const alcoholRevenue = teamConsumptions.reduce((sum, c) => sum + c.total, 0);
